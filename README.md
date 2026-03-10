@@ -33,6 +33,12 @@ npm run dev
 
 После запуска открой локальный URL из вывода Vite (обычно `http://localhost:5173`).
 
+### Demo-аккаунты для входа
+
+- `viewer@opsboard.dev / 123456`
+- `operator@opsboard.dev / 123456`
+- `admin@opsboard.dev / 123456`
+
 ## Скрипты
 
 ```bash

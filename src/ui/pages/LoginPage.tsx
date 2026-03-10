@@ -1,12 +1,12 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { loginRequest } from "../../api/auth";
-import { AppRole, useAuthStore } from "../../state/authStore";
+import { loginRequest, MOCK_ACCOUNTS } from "../../api/auth";
+import { useAuthStore } from "../../state/authStore";
 
 export function LoginPage() {
-  const [userName, setUserName] = useState("Middle React Dev");
-  const [role, setRole] = useState<AppRole>("operator");
+  const [email, setEmail] = useState("operator@opsboard.dev");
+  const [password, setPassword] = useState("123456");
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
@@ -26,7 +26,7 @@ export function LoginPage() {
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    loginMutation.mutate({ userName, role });
+    loginMutation.mutate({ email, password });
   };
 
   return (
@@ -34,26 +34,33 @@ export function LoginPage() {
       <form className="card login-card" onSubmit={onSubmit}>
         <h1>OpsBoard Login</h1>
         <label className="field">
-          <span>User name</span>
+          <span>Email</span>
           <input
             className="input"
-            value={userName}
-            onChange={(event) => setUserName(event.target.value)}
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
             required
           />
         </label>
         <label className="field">
-          <span>Role</span>
-          <select
+          <span>Password</span>
+          <input
             className="input"
-            value={role}
-            onChange={(event) => setRole(event.target.value as AppRole)}
-          >
-            <option value="viewer">Viewer</option>
-            <option value="operator">Operator</option>
-            <option value="admin">Admin</option>
-          </select>
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+          />
         </label>
+        <div className="demo-credentials">
+          <p className="muted-text">Demo accounts:</p>
+          {MOCK_ACCOUNTS.map((account) => (
+            <p className="muted-text" key={account.email}>
+              {account.role}: {account.email} / {account.password}
+            </p>
+          ))}
+        </div>
         {loginMutation.isError && (
           <p className="error-text">{(loginMutation.error as Error).message}</p>
         )}
