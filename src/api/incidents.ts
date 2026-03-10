@@ -12,7 +12,7 @@ import {
   IncidentStatus,
 } from "../domain/incidents";
 
-const incidentsDb: Incident[] = [
+const INITIAL_INCIDENTS: Incident[] = [
   {
     id: "INC-1201",
     title: "Payments queue delay in EU region",
@@ -103,8 +103,22 @@ const incidentsDb: Incident[] = [
   },
 ];
 
-const commentsDb = new Map<string, IncidentComment[]>();
-const eventsDb = new Map<string, IncidentEvent[]>();
+const STORAGE_KEY = "opsboard.incidents.storage.v1";
+
+type PersistedIncidentsData = {
+  incidents: Incident[];
+  commentsByIncidentId: Record<string, IncidentComment[]>;
+  eventsByIncidentId: Record<string, IncidentEvent[]>;
+  counters: {
+    incidentCounter: number;
+    commentCounter: number;
+    eventCounter: number;
+  };
+};
+
+let incidentsDb: Incident[] = [];
+let commentsDb = new Map<string, IncidentComment[]>();
+let eventsDb = new Map<string, IncidentEvent[]>();
 let commentCounter = 4000;
 let eventCounter = 7000;
 let incidentCounter = 1300;
@@ -130,17 +144,112 @@ const ASSIGNEE_OPTIONS = [
   "Roman Sokolov",
 ] as const;
 
-for (const incident of incidentsDb) {
-  commentsDb.set(incident.id, []);
-  eventsDb.set(incident.id, [
-    {
-      id: `EV-${eventCounter++}`,
-      incidentId: incident.id,
-      message: `Incident created with status "${incident.status}".`,
-      createdAt: incident.updatedAt,
-    },
-  ]);
+function isStorageAvailable(): boolean {
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
+
+function createDefaultData(): PersistedIncidentsData {
+  const commentsByIncidentId: Record<string, IncidentComment[]> = {};
+  const eventsByIncidentId: Record<string, IncidentEvent[]> = {};
+  let localEventCounter = 7000;
+
+  for (const incident of INITIAL_INCIDENTS) {
+    commentsByIncidentId[incident.id] = [];
+    eventsByIncidentId[incident.id] = [
+      {
+        id: `EV-${localEventCounter++}`,
+        incidentId: incident.id,
+        message: `Incident created with status "${incident.status}".`,
+        createdAt: incident.updatedAt,
+      },
+    ];
+  }
+
+  return {
+    incidents: [...INITIAL_INCIDENTS],
+    commentsByIncidentId,
+    eventsByIncidentId,
+    counters: {
+      incidentCounter: 1300,
+      commentCounter: 4000,
+      eventCounter: localEventCounter,
+    },
+  };
+}
+
+function saveToStorage() {
+  if (!isStorageAvailable()) {
+    return;
+  }
+
+  const commentsByIncidentId: Record<string, IncidentComment[]> = {};
+  const eventsByIncidentId: Record<string, IncidentEvent[]> = {};
+
+  for (const [incidentId, comments] of commentsDb.entries()) {
+    commentsByIncidentId[incidentId] = comments;
+  }
+  for (const [incidentId, events] of eventsDb.entries()) {
+    eventsByIncidentId[incidentId] = events;
+  }
+
+  const payload: PersistedIncidentsData = {
+    incidents: incidentsDb,
+    commentsByIncidentId,
+    eventsByIncidentId,
+    counters: {
+      incidentCounter,
+      commentCounter,
+      eventCounter,
+    },
+  };
+
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+function initializeData() {
+  const fallback = createDefaultData();
+
+  if (!isStorageAvailable()) {
+    incidentsDb = fallback.incidents;
+    commentsDb = new Map(Object.entries(fallback.commentsByIncidentId));
+    eventsDb = new Map(Object.entries(fallback.eventsByIncidentId));
+    incidentCounter = fallback.counters.incidentCounter;
+    commentCounter = fallback.counters.commentCounter;
+    eventCounter = fallback.counters.eventCounter;
+    return;
+  }
+
+  const raw = window.localStorage.getItem(STORAGE_KEY);
+  if (!raw) {
+    incidentsDb = fallback.incidents;
+    commentsDb = new Map(Object.entries(fallback.commentsByIncidentId));
+    eventsDb = new Map(Object.entries(fallback.eventsByIncidentId));
+    incidentCounter = fallback.counters.incidentCounter;
+    commentCounter = fallback.counters.commentCounter;
+    eventCounter = fallback.counters.eventCounter;
+    saveToStorage();
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as PersistedIncidentsData;
+    incidentsDb = parsed.incidents ?? fallback.incidents;
+    commentsDb = new Map(Object.entries(parsed.commentsByIncidentId ?? {}));
+    eventsDb = new Map(Object.entries(parsed.eventsByIncidentId ?? {}));
+    incidentCounter = parsed.counters?.incidentCounter ?? fallback.counters.incidentCounter;
+    commentCounter = parsed.counters?.commentCounter ?? fallback.counters.commentCounter;
+    eventCounter = parsed.counters?.eventCounter ?? fallback.counters.eventCounter;
+  } catch {
+    incidentsDb = fallback.incidents;
+    commentsDb = new Map(Object.entries(fallback.commentsByIncidentId));
+    eventsDb = new Map(Object.entries(fallback.eventsByIncidentId));
+    incidentCounter = fallback.counters.incidentCounter;
+    commentCounter = fallback.counters.commentCounter;
+    eventCounter = fallback.counters.eventCounter;
+    saveToStorage();
+  }
+}
+initializeData();
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -178,6 +287,7 @@ function appendEvent(incidentId: string, message: string) {
     createdAt: new Date().toISOString(),
   });
   eventsDb.set(incidentId, events);
+  saveToStorage();
 }
 
 function isIncidentOverdue(incident: Incident): boolean {
@@ -417,6 +527,7 @@ export async function createIncident(params: {
       createdAt: now,
     },
   ]);
+  saveToStorage();
 
   return { ...incident };
 }
