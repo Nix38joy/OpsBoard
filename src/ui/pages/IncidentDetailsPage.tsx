@@ -1,7 +1,85 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FormEvent, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import {
+  addIncidentComment,
+  getIncidentDetails,
+  getStatusTransitions,
+  updateIncidentStatus,
+} from "../../api/incidents";
+import { IncidentStatus } from "../../domain/incidents";
+import { useAuthStore } from "../../state/authStore";
 
 export function IncidentDetailsPage() {
   const { incidentId } = useParams();
+  const queryClient = useQueryClient();
+  const role = useAuthStore((state) => state.role);
+  const userName = useAuthStore((state) => state.userName);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const detailsQuery = useQuery({
+    queryKey: ["incident", incidentId],
+    queryFn: () => getIncidentDetails(incidentId ?? ""),
+    enabled: Boolean(incidentId),
+  });
+
+  const allowedTransitions = useMemo(() => {
+    if (!detailsQuery.data?.incident || !role) {
+      return [] as IncidentStatus[];
+    }
+    return getStatusTransitions(detailsQuery.data.incident.status, role);
+  }, [detailsQuery.data?.incident, role]);
+
+  const statusMutation = useMutation({
+    mutationFn: (nextStatus: IncidentStatus) =>
+      updateIncidentStatus({
+        incidentId: incidentId ?? "",
+        nextStatus,
+        role: role ?? "viewer",
+        actorName: userName ?? "Unknown user",
+      }),
+    onSuccess: async () => {
+      setActionError(null);
+      await queryClient.invalidateQueries({ queryKey: ["incident", incidentId] });
+      await queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (error) => {
+      setActionError((error as Error).message);
+    },
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: (message: string) =>
+      addIncidentComment({
+        incidentId: incidentId ?? "",
+        role: role ?? "viewer",
+        authorName: userName ?? "Unknown user",
+        message,
+      }),
+    onSuccess: async () => {
+      setCommentDraft("");
+      setActionError(null);
+      await queryClient.invalidateQueries({ queryKey: ["incident", incidentId] });
+    },
+    onError: (error) => {
+      setActionError((error as Error).message);
+    },
+  });
+
+  const onCommentSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    commentMutation.mutate(commentDraft);
+  };
+
+  if (!incidentId) {
+    return (
+      <div className="page">
+        <p className="error-text">Invalid incident id.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="page">
@@ -9,10 +87,121 @@ export function IncidentDetailsPage() {
       <p>
         Incident ID: <strong>{incidentId}</strong>
       </p>
-      <section className="card">
-        <h2>Summary</h2>
-        <p>Temporary details screen. Next iterations will add status transitions and comments.</p>
-      </section>
+
+      {detailsQuery.isLoading && <p>Loading incident details...</p>}
+      {detailsQuery.isError && (
+        <p className="error-text">Could not load details. Please go back and try again.</p>
+      )}
+      {!detailsQuery.isLoading && !detailsQuery.isError && detailsQuery.data && (
+        <>
+          <section className="card details-grid">
+            <div>
+              <p>
+                <strong>Title:</strong> {detailsQuery.data.incident.title}
+              </p>
+              <p>
+                <strong>Status:</strong> {detailsQuery.data.incident.status}
+              </p>
+              <p>
+                <strong>Severity:</strong> {detailsQuery.data.incident.severity}
+              </p>
+              <p>
+                <strong>Priority:</strong> {detailsQuery.data.incident.priority}
+              </p>
+            </div>
+            <div>
+              <p>
+                <strong>Team:</strong> {detailsQuery.data.incident.team}
+              </p>
+              <p>
+                <strong>Assignee:</strong> {detailsQuery.data.incident.assignee}
+              </p>
+              <p>
+                <strong>Updated:</strong>{" "}
+                {new Date(detailsQuery.data.incident.updatedAt).toLocaleString()}
+              </p>
+            </div>
+          </section>
+
+          <section className="card section-gap">
+            <h2>Description</h2>
+            <p>{detailsQuery.data.incident.description}</p>
+          </section>
+
+          <section className="card section-gap">
+            <h2>Status actions</h2>
+            <p>Allowed transitions for role: {role}</p>
+            <div className="actions-row">
+              {allowedTransitions.length === 0 && <p>No status actions available.</p>}
+              {allowedTransitions.map((status) => (
+                <button
+                  key={status}
+                  className="btn"
+                  type="button"
+                  disabled={statusMutation.isPending}
+                  onClick={() => statusMutation.mutate(status)}
+                >
+                  Set {status}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="card section-gap">
+            <h2>Comments</h2>
+            <form onSubmit={onCommentSubmit}>
+              <textarea
+                className="textarea"
+                value={commentDraft}
+                onChange={(event) => setCommentDraft(event.target.value)}
+                placeholder="Write a comment (for operator/admin)"
+                disabled={role === "viewer" || commentMutation.isPending}
+              />
+              <button
+                className="btn"
+                type="submit"
+                disabled={role === "viewer" || commentMutation.isPending}
+              >
+                {commentMutation.isPending ? "Sending..." : "Add comment"}
+              </button>
+            </form>
+            {detailsQuery.data.comments.length === 0 ? (
+              <p>No comments yet.</p>
+            ) : (
+              <ul className="stack-list">
+                {detailsQuery.data.comments.map((comment) => (
+                  <li key={comment.id} className="card stack-item">
+                    <p>
+                      <strong>{comment.authorName}</strong> -{" "}
+                      {new Date(comment.createdAt).toLocaleString()}
+                    </p>
+                    <p>{comment.message}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="card section-gap">
+            <h2>Timeline</h2>
+            {detailsQuery.data.events.length === 0 ? (
+              <p>No events yet.</p>
+            ) : (
+              <ul className="stack-list">
+                {detailsQuery.data.events.map((event) => (
+                  <li key={event.id} className="stack-item">
+                    <p>{event.message}</p>
+                    <small>{new Date(event.createdAt).toLocaleString()}</small>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {actionError && <p className="error-text">{actionError}</p>}
+        </>
+      )}
+
       <Link className="btn ghost" to="/incidents">
         Back to incidents
       </Link>

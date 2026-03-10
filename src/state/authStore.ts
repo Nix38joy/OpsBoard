@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { AuthSession } from "../api/auth";
+import { AppRole } from "../domain/incidents";
 
-export type AppRole = "viewer" | "operator" | "admin";
 const AUTH_SESSION_KEY = "opsboard.auth.session";
 
 function readSession(): AuthSession | null {

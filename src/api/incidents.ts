@@ -1,0 +1,399 @@
+import {
+  AppRole,
+  Incident,
+  IncidentComment,
+  IncidentDetails,
+  IncidentEvent,
+  IncidentsFilters,
+  IncidentsListResponse,
+  DashboardMetric,
+  IncidentPriority,
+  IncidentSeverity,
+  IncidentStatus,
+} from "../domain/incidents";
+
+const incidentsDb: Incident[] = [
+  {
+    id: "INC-1201",
+    title: "Payments queue delay in EU region",
+    description: "Transactions are stuck in processing for around 12 minutes in EU zone.",
+    severity: "high",
+    priority: "p1",
+    status: "in_progress",
+    team: "Payments",
+    assignee: "Ilya Petrov",
+    updatedAt: "2026-03-10T08:20:00.000Z",
+  },
+  {
+    id: "INC-1202",
+    title: "Warehouse sync timeout at midnight batch",
+    description: "Sync job does not complete within expected SLA and retries three times.",
+    severity: "medium",
+    priority: "p2",
+    status: "open",
+    team: "Logistics",
+    assignee: "Nina Smirnova",
+    updatedAt: "2026-03-10T09:15:00.000Z",
+  },
+  {
+    id: "INC-1203",
+    title: "Invoice export returns 502 for large reports",
+    description: "Users report export failures for reports with more than 20k rows.",
+    severity: "critical",
+    priority: "p1",
+    status: "open",
+    team: "Billing",
+    assignee: "Maksim Orlov",
+    updatedAt: "2026-03-09T19:40:00.000Z",
+  },
+  {
+    id: "INC-1204",
+    title: "Email notifications are delayed for 30 minutes",
+    description: "Notification queue latency spikes during peak traffic periods.",
+    severity: "low",
+    priority: "p4",
+    status: "resolved",
+    team: "Platform",
+    assignee: "Alina Romanova",
+    updatedAt: "2026-03-08T12:05:00.000Z",
+  },
+  {
+    id: "INC-1205",
+    title: "SLA clock is not visible in incident details",
+    description: "SLA countdown chip is hidden when browser zoom is set above 110 percent.",
+    severity: "medium",
+    priority: "p3",
+    status: "closed",
+    team: "Ops UI",
+    assignee: "Kirill Andreev",
+    updatedAt: "2026-03-07T14:11:00.000Z",
+  },
+  {
+    id: "INC-1206",
+    title: "Rate limiter triggers false positives on API gateway",
+    description: "Gateway rejects safe traffic bursts from internal dashboard sync workers.",
+    severity: "high",
+    priority: "p1",
+    status: "in_progress",
+    team: "Core API",
+    assignee: "Pavel Kozlov",
+    updatedAt: "2026-03-10T07:01:00.000Z",
+  },
+  {
+    id: "INC-1207",
+    title: "Admin audit page freezes on big account list",
+    description: "The audit list becomes unresponsive after applying two filters together.",
+    severity: "high",
+    priority: "p2",
+    status: "open",
+    team: "Ops UI",
+    assignee: "Daria Melnik",
+    updatedAt: "2026-03-09T16:32:00.000Z",
+  },
+  {
+    id: "INC-1208",
+    title: "Data import retries exceed expected thresholds",
+    description: "Import worker loops on malformed CSV rows and retries above configured limits.",
+    severity: "critical",
+    priority: "p1",
+    status: "in_progress",
+    team: "Data Platform",
+    assignee: "Roman Sokolov",
+    updatedAt: "2026-03-10T09:52:00.000Z",
+  },
+];
+
+const commentsDb = new Map<string, IncidentComment[]>();
+const eventsDb = new Map<string, IncidentEvent[]>();
+let commentCounter = 4000;
+let eventCounter = 7000;
+let incidentCounter = 1300;
+
+const TEAM_OPTIONS = [
+  "Payments",
+  "Logistics",
+  "Billing",
+  "Platform",
+  "Ops UI",
+  "Core API",
+  "Data Platform",
+] as const;
+
+const ASSIGNEE_OPTIONS = [
+  "Ilya Petrov",
+  "Nina Smirnova",
+  "Maksim Orlov",
+  "Alina Romanova",
+  "Kirill Andreev",
+  "Pavel Kozlov",
+  "Daria Melnik",
+  "Roman Sokolov",
+] as const;
+
+for (const incident of incidentsDb) {
+  commentsDb.set(incident.id, []);
+  eventsDb.set(incident.id, [
+    {
+      id: `EV-${eventCounter++}`,
+      incidentId: incident.id,
+      message: `Incident created with status "${incident.status}".`,
+      createdAt: incident.updatedAt,
+    },
+  ]);
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getIncidentOrThrow(incidentId: string): Incident {
+  const found = incidentsDb.find((item) => item.id === incidentId);
+  if (!found) {
+    throw new Error("Incident not found.");
+  }
+  return found;
+}
+
+function getAllowedStatusTransitions(status: IncidentStatus, role: AppRole): IncidentStatus[] {
+  const common: Record<IncidentStatus, IncidentStatus[]> = {
+    open: ["in_progress", "resolved"],
+    in_progress: ["resolved"],
+    resolved: ["closed", "in_progress"],
+    closed: [],
+  };
+
+  if (status === "closed" && role === "admin") {
+    return ["in_progress"];
+  }
+
+  return common[status];
+}
+
+function appendEvent(incidentId: string, message: string) {
+  const events = eventsDb.get(incidentId) ?? [];
+  events.unshift({
+    id: `EV-${eventCounter++}`,
+    incidentId,
+    message,
+    createdAt: new Date().toISOString(),
+  });
+  eventsDb.set(incidentId, events);
+}
+
+function isIncidentOverdue(incident: Incident): boolean {
+  if (incident.status === "resolved" || incident.status === "closed") {
+    return false;
+  }
+
+  const overdueMs = 24 * 60 * 60 * 1000;
+  const ageMs = Date.now() - new Date(incident.updatedAt).getTime();
+  return ageMs > overdueMs;
+}
+
+export async function getIncidents(filters: IncidentsFilters): Promise<IncidentsListResponse> {
+  await delay(450);
+
+  const search = filters.search.trim().toLowerCase();
+  const filtered = incidentsDb.filter((incident) => {
+    const statusMatch = filters.status === "all" || incident.status === filters.status;
+    const severityMatch = filters.severity === "all" || incident.severity === filters.severity;
+    const overdueMatch = !filters.overdueOnly || isIncidentOverdue(incident);
+    const searchMatch =
+      search.length === 0 ||
+      incident.id.toLowerCase().includes(search) ||
+      incident.title.toLowerCase().includes(search);
+
+    return statusMatch && severityMatch && overdueMatch && searchMatch;
+  });
+
+  const start = (filters.page - 1) * filters.pageSize;
+  const end = start + filters.pageSize;
+  const items = filtered.slice(start, end);
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
+
+  return {
+    items,
+    total,
+    page: filters.page,
+    pageSize: filters.pageSize,
+    totalPages,
+  };
+}
+
+export async function getDashboardMetrics(): Promise<DashboardMetric[]> {
+  await delay(250);
+
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const openCount = incidentsDb.filter((item) => item.status === "open").length;
+  const overdueCount = incidentsDb.filter((item) => isIncidentOverdue(item)).length;
+  const resolved7dCount = incidentsDb.filter((item) => {
+    if (item.status !== "resolved" && item.status !== "closed") {
+      return false;
+    }
+    return new Date(item.updatedAt).getTime() >= sevenDaysAgo;
+  }).length;
+  const criticalActiveCount = incidentsDb.filter(
+    (item) =>
+      item.severity === "critical" && (item.status === "open" || item.status === "in_progress"),
+  ).length;
+
+  return [
+    {
+      id: "open",
+      label: "Open",
+      value: openCount,
+      description: "Incidents currently in open status",
+      to: "/incidents?status=open",
+    },
+    {
+      id: "overdue",
+      label: "Overdue",
+      value: overdueCount,
+      description: "Active incidents older than 24h",
+      to: "/incidents?overdue=1",
+    },
+    {
+      id: "resolved7d",
+      label: "Resolved (7d)",
+      value: resolved7dCount,
+      description: "Resolved or closed during last 7 days",
+      to: "/incidents?status=resolved",
+    },
+    {
+      id: "criticalActive",
+      label: "Critical active",
+      value: criticalActiveCount,
+      description: "Critical incidents still in progress",
+      to: "/incidents?severity=critical",
+    },
+  ];
+}
+
+export async function getIncidentFormOptions(): Promise<{
+  teams: string[];
+  assignees: string[];
+}> {
+  await delay(200);
+  return {
+    teams: [...TEAM_OPTIONS],
+    assignees: [...ASSIGNEE_OPTIONS],
+  };
+}
+
+export async function getIncidentDetails(incidentId: string): Promise<IncidentDetails> {
+  await delay(350);
+  const incident = getIncidentOrThrow(incidentId);
+  const comments = commentsDb.get(incidentId) ?? [];
+  const events = eventsDb.get(incidentId) ?? [];
+
+  return {
+    incident: { ...incident },
+    comments: [...comments],
+    events: [...events],
+  };
+}
+
+export function getStatusTransitions(status: IncidentStatus, role: AppRole): IncidentStatus[] {
+  return getAllowedStatusTransitions(status, role);
+}
+
+export async function updateIncidentStatus(params: {
+  incidentId: string;
+  nextStatus: IncidentStatus;
+  role: AppRole;
+  actorName: string;
+}): Promise<Incident> {
+  await delay(250);
+  const incident = getIncidentOrThrow(params.incidentId);
+  const allowedNext = getAllowedStatusTransitions(incident.status, params.role);
+
+  if (!allowedNext.includes(params.nextStatus)) {
+    throw new Error("Status transition is not allowed for current role.");
+  }
+
+  incident.status = params.nextStatus;
+  incident.updatedAt = new Date().toISOString();
+  appendEvent(
+    params.incidentId,
+    `${params.actorName} changed status to "${params.nextStatus}".`,
+  );
+
+  return { ...incident };
+}
+
+export async function addIncidentComment(params: {
+  incidentId: string;
+  role: AppRole;
+  authorName: string;
+  message: string;
+}): Promise<IncidentComment> {
+  await delay(250);
+  getIncidentOrThrow(params.incidentId);
+
+  if (params.role === "viewer") {
+    throw new Error("Viewer cannot add comments.");
+  }
+
+  const message = params.message.trim();
+  if (message.length === 0) {
+    throw new Error("Comment cannot be empty.");
+  }
+
+  if (message.length > 2000) {
+    throw new Error("Comment is too long.");
+  }
+
+  const comment: IncidentComment = {
+    id: `COM-${commentCounter++}`,
+    incidentId: params.incidentId,
+    authorName: params.authorName,
+    message,
+    createdAt: new Date().toISOString(),
+  };
+
+  const comments = commentsDb.get(params.incidentId) ?? [];
+  comments.unshift(comment);
+  commentsDb.set(params.incidentId, comments);
+  appendEvent(params.incidentId, `${params.authorName} added a comment.`);
+
+  return comment;
+}
+
+export async function createIncident(params: {
+  title: string;
+  description: string;
+  severity: IncidentSeverity;
+  priority: IncidentPriority;
+  team: string;
+  assignee: string;
+  actorName: string;
+}): Promise<Incident> {
+  await delay(400);
+
+  const now = new Date().toISOString();
+  const incident: Incident = {
+    id: `INC-${incidentCounter++}`,
+    title: params.title.trim(),
+    description: params.description.trim(),
+    severity: params.severity,
+    priority: params.priority,
+    status: "open",
+    team: params.team,
+    assignee: params.assignee,
+    updatedAt: now,
+  };
+
+  incidentsDb.unshift(incident);
+  commentsDb.set(incident.id, []);
+  eventsDb.set(incident.id, [
+    {
+      id: `EV-${eventCounter++}`,
+      incidentId: incident.id,
+      message: `${params.actorName} created the incident.`,
+      createdAt: now,
+    },
+  ]);
+
+  return { ...incident };
+}

@@ -1,4 +1,4 @@
-type AppRole = "viewer" | "operator" | "admin";
+import { AppRole } from "../domain/incidents";
 
 type LoginPayload = {
   userName: string;
