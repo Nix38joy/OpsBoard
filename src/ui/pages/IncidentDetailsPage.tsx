@@ -126,6 +126,11 @@ export function IncidentDetailsPage() {
           <section className="card section-gap">
             <h2>Description</h2>
             <p>{detailsQuery.data.incident.description}</p>
+            {(role === "operator" || role === "admin") && (
+              <Link className="btn ghost section-link" to={`/incidents/${incidentId}/edit`}>
+                Edit incident
+              </Link>
+            )}
           </section>
 
           <section className="card section-gap">

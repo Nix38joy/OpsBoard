@@ -397,3 +397,33 @@ export async function createIncident(params: {
 
   return { ...incident };
 }
+
+export async function updateIncident(params: {
+  incidentId: string;
+  role: AppRole;
+  actorName: string;
+  title: string;
+  description: string;
+  severity: IncidentSeverity;
+  priority: IncidentPriority;
+  team: string;
+  assignee: string;
+}): Promise<Incident> {
+  await delay(350);
+
+  if (params.role === "viewer") {
+    throw new Error("Viewer cannot edit incidents.");
+  }
+
+  const incident = getIncidentOrThrow(params.incidentId);
+  incident.title = params.title.trim();
+  incident.description = params.description.trim();
+  incident.severity = params.severity;
+  incident.priority = params.priority;
+  incident.team = params.team;
+  incident.assignee = params.assignee;
+  incident.updatedAt = new Date().toISOString();
+
+  appendEvent(params.incidentId, `${params.actorName} updated incident fields.`);
+  return { ...incident };
+}

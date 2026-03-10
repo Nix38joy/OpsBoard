@@ -1,16 +1,16 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ReactNode } from "react";
+import { AppRole } from "../domain/incidents";
 import { AppLayout } from "../ui/layout/AppLayout";
 import { AccessDeniedPage } from "../ui/pages/AccessDeniedPage";
 import { DashboardPage } from "../ui/pages/DashboardPage";
 import { IncidentCreatePage } from "../ui/pages/IncidentCreatePage";
 import { IncidentDetailsPage } from "../ui/pages/IncidentDetailsPage";
+import { IncidentEditPage } from "../ui/pages/IncidentEditPage";
 import { IncidentsPage } from "../ui/pages/IncidentsPage";
 import { LoginPage } from "../ui/pages/LoginPage";
 import { NotFoundPage } from "../ui/pages/NotFoundPage";
 import { useAuthStore } from "../state/authStore";
-
-type AppRole = "viewer" | "operator" | "admin";
 
 function ProtectedRoute({
   children,
@@ -50,6 +50,14 @@ export function AppRouter() {
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="incidents" element={<IncidentsPage />} />
         <Route path="incidents/:incidentId" element={<IncidentDetailsPage />} />
+        <Route
+          path="incidents/:incidentId/edit"
+          element={
+            <ProtectedRoute allowedRoles={["operator", "admin"]}>
+              <IncidentEditPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="incidents/new"
           element={

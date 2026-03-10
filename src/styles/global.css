@@ -158,6 +158,11 @@ a {
   margin-top: 12px;
 }
 
+.section-link {
+  display: inline-block;
+  margin-top: 8px;
+}
+
 .details-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

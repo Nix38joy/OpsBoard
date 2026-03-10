@@ -2,42 +2,22 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import { z } from "zod";
 import { createIncident, getIncidentFormOptions } from "../../api/incidents";
 import { useAuthStore } from "../../state/authStore";
-
-const createIncidentSchema = z.object({
-  title: z.string().trim().min(5, "Title must contain at least 5 characters.").max(120),
-  description: z
-    .string()
-    .trim()
-    .min(20, "Description must contain at least 20 characters.")
-    .max(2000, "Description is too long."),
-  severity: z.enum(["low", "medium", "high", "critical"]),
-  priority: z.enum(["p1", "p2", "p3", "p4"]),
-  team: z.string().min(1, "Team is required."),
-  assignee: z.string().min(1, "Assignee is required."),
-});
-
-type CreateIncidentFormData = z.infer<typeof createIncidentSchema>;
-
-const DEFAULT_VALUES: CreateIncidentFormData = {
-  title: "",
-  description: "",
-  severity: "medium",
-  priority: "p2",
-  team: "",
-  assignee: "",
-};
+import {
+  INCIDENT_FORM_DEFAULT_VALUES,
+  IncidentFormValues,
+  incidentFormSchema,
+} from "../forms/incidentFormSchema";
 
 export function IncidentCreatePage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const userName = useAuthStore((state) => state.userName) ?? "Unknown user";
 
-  const form = useForm<CreateIncidentFormData>({
-    resolver: zodResolver(createIncidentSchema),
-    defaultValues: DEFAULT_VALUES,
+  const form = useForm<IncidentFormValues>({
+    resolver: zodResolver(incidentFormSchema),
+    defaultValues: INCIDENT_FORM_DEFAULT_VALUES,
   });
 
   const optionsQuery = useQuery({
