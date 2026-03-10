@@ -360,6 +360,29 @@ export async function addIncidentComment(params: {
   return comment;
 }
 
+export async function deleteIncidentComment(params: {
+  incidentId: string;
+  commentId: string;
+  role: AppRole;
+  actorName: string;
+}): Promise<void> {
+  await delay(250);
+  getIncidentOrThrow(params.incidentId);
+
+  if (params.role !== "admin") {
+    throw new Error("Only admin can delete comments.");
+  }
+
+  const comments = commentsDb.get(params.incidentId) ?? [];
+  const nextComments = comments.filter((comment) => comment.id !== params.commentId);
+  if (nextComments.length === comments.length) {
+    throw new Error("Comment not found.");
+  }
+
+  commentsDb.set(params.incidentId, nextComments);
+  appendEvent(params.incidentId, `${params.actorName} deleted a comment.`);
+}
+
 export async function createIncident(params: {
   title: string;
   description: string;

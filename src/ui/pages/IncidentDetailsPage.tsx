@@ -3,6 +3,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   addIncidentComment,
+  deleteIncidentComment,
   getIncidentDetails,
   getStatusTransitions,
   updateIncidentStatus,
@@ -68,10 +69,29 @@ export function IncidentDetailsPage() {
     },
   });
 
+  const deleteCommentMutation = useMutation({
+    mutationFn: (commentId: string) =>
+      deleteIncidentComment({
+        incidentId: incidentId ?? "",
+        commentId,
+        role: role ?? "viewer",
+        actorName: userName ?? "Unknown user",
+      }),
+    onSuccess: async () => {
+      setActionError(null);
+      await queryClient.invalidateQueries({ queryKey: ["incident", incidentId] });
+    },
+    onError: (error) => {
+      setActionError((error as Error).message);
+    },
+  });
+
   const onCommentSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     commentMutation.mutate(commentDraft);
   };
+  const isAnyActionPending =
+    statusMutation.isPending || commentMutation.isPending || deleteCommentMutation.isPending;
 
   if (!incidentId) {
     return (
@@ -94,6 +114,7 @@ export function IncidentDetailsPage() {
       )}
       {!detailsQuery.isLoading && !detailsQuery.isError && detailsQuery.data && (
         <>
+          {actionError && <p className="error-text">{actionError}</p>}
           <section className="card details-grid">
             <div>
               <p>
@@ -143,10 +164,10 @@ export function IncidentDetailsPage() {
                   key={status}
                   className="btn"
                   type="button"
-                  disabled={statusMutation.isPending}
+                  disabled={isAnyActionPending}
                   onClick={() => statusMutation.mutate(status)}
                 >
-                  Set {status}
+                  {statusMutation.isPending ? "Updating..." : `Set ${status}`}
                 </button>
               ))}
             </div>
@@ -160,16 +181,17 @@ export function IncidentDetailsPage() {
                 value={commentDraft}
                 onChange={(event) => setCommentDraft(event.target.value)}
                 placeholder="Write a comment (for operator/admin)"
-                disabled={role === "viewer" || commentMutation.isPending}
+                disabled={role === "viewer" || isAnyActionPending}
               />
               <button
                 className="btn"
                 type="submit"
-                disabled={role === "viewer" || commentMutation.isPending}
+                disabled={role === "viewer" || isAnyActionPending}
               >
                 {commentMutation.isPending ? "Sending..." : "Add comment"}
               </button>
             </form>
+            {role === "viewer" && <p className="muted-text">Viewer role can only read comments.</p>}
             {detailsQuery.data.comments.length === 0 ? (
               <p>No comments yet.</p>
             ) : (
@@ -181,6 +203,16 @@ export function IncidentDetailsPage() {
                       {new Date(comment.createdAt).toLocaleString()}
                     </p>
                     <p>{comment.message}</p>
+                    {role === "admin" && (
+                      <button
+                        className="btn danger"
+                        type="button"
+                        disabled={isAnyActionPending}
+                        onClick={() => deleteCommentMutation.mutate(comment.id)}
+                      >
+                        {deleteCommentMutation.isPending ? "Deleting..." : "Delete comment"}
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -202,8 +234,6 @@ export function IncidentDetailsPage() {
               </ul>
             )}
           </section>
-
-          {actionError && <p className="error-text">{actionError}</p>}
         </>
       )}
 

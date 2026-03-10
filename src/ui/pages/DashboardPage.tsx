@@ -17,15 +17,21 @@ export function DashboardPage() {
         <p className="error-text">Could not load metrics. Try refreshing the page.</p>
       )}
       {!metricsQuery.isLoading && !metricsQuery.isError && metricsQuery.data && (
-        <div className="metrics-grid">
-          {metricsQuery.data.map((metric) => (
-            <Link className="card metric-card metric-link" to={metric.to} key={metric.id}>
-              <h2>{metric.label}</h2>
-              <p>{metric.value}</p>
-              <small>{metric.description}</small>
-            </Link>
-          ))}
-        </div>
+        <>
+          {metricsQuery.data.length === 0 ? (
+            <p className="muted-text">No metrics available yet.</p>
+          ) : (
+            <div className="metrics-grid">
+              {metricsQuery.data.map((metric) => (
+                <Link className="card metric-card metric-link" to={metric.to} key={metric.id}>
+                  <h2>{metric.label}</h2>
+                  <p>{metric.value}</p>
+                  <small>{metric.description}</small>
+                </Link>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

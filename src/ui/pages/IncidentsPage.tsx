@@ -87,6 +87,7 @@ export function IncidentsPage() {
   const totalPages = incidentsQuery.data?.totalPages ?? 1;
   const canGoPrev = filters.page > 1;
   const canGoNext = filters.page < totalPages;
+  const isRefreshing = incidentsQuery.isFetching && !incidentsQuery.isLoading;
 
   const handleReset = () => {
     resetFilters();
@@ -158,6 +159,7 @@ export function IncidentsPage() {
 
       <div className="card">
         {incidentsQuery.isLoading && <p>Loading incidents...</p>}
+        {isRefreshing && <p className="muted-text">Updating results...</p>}
         {incidentsQuery.isError && (
           <p className="error-text">Could not load incidents. Try refreshing the page.</p>
         )}
@@ -186,9 +188,15 @@ export function IncidentsPage() {
                         <Link to={`/incidents/${item.id}`}>{item.id}</Link>
                       </td>
                       <td>{item.title}</td>
-                      <td>{item.severity}</td>
-                      <td>{item.priority}</td>
-                      <td>{item.status}</td>
+                      <td>
+                        <span className={`pill pill-severity-${item.severity}`}>{item.severity}</span>
+                      </td>
+                      <td>
+                        <span className="pill pill-priority">{item.priority.toUpperCase()}</span>
+                      </td>
+                      <td>
+                        <span className={`pill pill-status-${item.status}`}>{item.status}</span>
+                      </td>
                       <td>{item.team}</td>
                       <td>{item.assignee}</td>
                       <td>{new Date(item.updatedAt).toLocaleString()}</td>

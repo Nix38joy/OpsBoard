@@ -49,6 +49,7 @@ export function IncidentCreatePage() {
       <p>Production-like form with schema validation and mutation flow.</p>
 
       <form className="card form-grid" onSubmit={onSubmit}>
+        {optionsQuery.isLoading && <p className="muted-text">Loading teams and assignees...</p>}
         <label className="field">
           <span>Title</span>
           <input className="input" {...form.register("title")} />
@@ -122,7 +123,11 @@ export function IncidentCreatePage() {
         )}
 
         <div className="actions-row">
-          <button className="btn" type="submit" disabled={createMutation.isPending}>
+          <button
+            className="btn"
+            type="submit"
+            disabled={createMutation.isPending || optionsQuery.isLoading}
+          >
             {createMutation.isPending ? "Creating..." : "Create incident"}
           </button>
         </div>

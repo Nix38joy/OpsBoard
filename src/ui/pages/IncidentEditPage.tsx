@@ -80,6 +80,7 @@ export function IncidentEditPage() {
       )}
       {!detailsQuery.isLoading && !detailsQuery.isError && detailsQuery.data && (
         <form className="card form-grid" onSubmit={onSubmit}>
+          {optionsQuery.isLoading && <p className="muted-text">Loading teams and assignees...</p>}
           <label className="field">
             <span>Title</span>
             <input className="input" {...form.register("title")} />
@@ -156,7 +157,11 @@ export function IncidentEditPage() {
 
           {editMutation.isError && <p className="error-text">{(editMutation.error as Error).message}</p>}
           <div className="actions-row">
-            <button className="btn" type="submit" disabled={editMutation.isPending}>
+            <button
+              className="btn"
+              type="submit"
+              disabled={editMutation.isPending || optionsQuery.isLoading}
+            >
               {editMutation.isPending ? "Saving..." : "Save changes"}
             </button>
             <Link className="btn ghost" to={`/incidents/${incidentId}`}>
