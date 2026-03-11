@@ -133,6 +133,31 @@ a {
   vertical-align: top;
 }
 
+.table-action-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.table-action-link:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.table-action-link:active {
+  background: #bfdbfe;
+}
+
 .filters-card {
   margin: 12px 0;
 }
@@ -167,6 +192,16 @@ a {
   margin-top: 8px;
 }
 
+.section-link-row {
+  margin-top: 8px;
+  align-items: center;
+  gap: 10px;
+}
+
+.page-bottom-action {
+  margin-top: 12px;
+}
+
 .details-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -177,6 +212,20 @@ a {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-top: 8px;
+}
+
+.page > .actions-row {
+  margin-bottom: 12px;
+}
+
+.card > .actions-row {
+  margin-top: 10px;
+}
+
+.card > .btn,
+.card > a.btn {
+  margin-top: 10px;
 }
 
 .form-grid {
@@ -312,12 +361,20 @@ a {
 
 .btn {
   height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1;
+  white-space: nowrap;
   border: none;
   border-radius: 8px;
   padding: 0 12px;
   background: #2563eb;
   color: #ffffff;
+  font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.05s ease;
 }
 
 .btn:disabled {
@@ -325,13 +382,29 @@ a {
   cursor: not-allowed;
 }
 
+.btn:not(:disabled):hover {
+  background: #1d4ed8;
+}
+
+.btn:not(:disabled):active {
+  transform: translateY(1px);
+}
+
 .btn.ghost {
   background: #e2e8f0;
   color: #0f172a;
 }
 
+.btn.ghost:not(:disabled):hover {
+  background: #cbd5e1;
+}
+
 .btn.danger {
   background: #dc2626;
+}
+
+.btn.danger:not(:disabled):hover {
+  background: #b91c1c;
 }
 
 .error-text {

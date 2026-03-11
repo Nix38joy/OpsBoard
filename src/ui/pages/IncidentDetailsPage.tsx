@@ -261,21 +261,23 @@ export function IncidentDetailsPage() {
           <section className="card section-gap">
             <h2>Description</h2>
             <p>{detailsQuery.data.incident.description}</p>
-            {canEditIncident(role) && (
-              <Link className="btn ghost section-link" to={`/incidents/${incidentId}/edit`}>
-                Edit incident
-              </Link>
-            )}
-            {canDeleteIncident(role) && (
-              <button
-                className="btn danger section-link"
-                type="button"
-                disabled={isAnyActionPending}
-                onClick={handleDeleteIncident}
-              >
-                {deleteIncidentMutation.isPending ? "Deleting..." : "Delete incident"}
-              </button>
-            )}
+            <div className="actions-row section-link-row">
+              {canEditIncident(role) && (
+                <Link className="btn ghost" to={`/incidents/${incidentId}/edit`}>
+                  Edit incident
+                </Link>
+              )}
+              {canDeleteIncident(role) && (
+                <button
+                  className="btn danger"
+                  type="button"
+                  disabled={isAnyActionPending}
+                  onClick={handleDeleteIncident}
+                >
+                  {deleteIncidentMutation.isPending ? "Deleting..." : "Delete incident"}
+                </button>
+              )}
+            </div>
           </section>
 
           <section className="card section-gap">
@@ -382,7 +384,7 @@ export function IncidentDetailsPage() {
         </>
       )}
 
-      <Link className="btn ghost" to="/incidents">
+      <Link className="btn ghost page-bottom-action" to="/incidents">
         Back to incidents
       </Link>
     </div>

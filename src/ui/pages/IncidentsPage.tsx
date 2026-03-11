@@ -111,6 +111,16 @@ export function IncidentsPage() {
       <p className="muted-text">
         {autoRefreshEnabled ? "Live updates every 15 seconds." : "Live updates are paused."}
       </p>
+      <div className="actions-row">
+        <button
+          className="btn ghost"
+          type="button"
+          onClick={() => void incidentsQuery.refetch()}
+          disabled={incidentsQuery.isFetching}
+        >
+          {incidentsQuery.isFetching ? "Refreshing..." : "Refresh now"}
+        </button>
+      </div>
 
       <section className="card filters-card">
         <div className="filters-grid">
@@ -192,6 +202,7 @@ export function IncidentsPage() {
                     <th>Team</th>
                     <th>Assignee</th>
                     <th>Updated</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -213,6 +224,11 @@ export function IncidentsPage() {
                       <td>{item.team}</td>
                       <td>{item.assignee}</td>
                       <td>{new Date(item.updatedAt).toLocaleString()}</td>
+                      <td>
+                        <Link className="table-action-link" to={`/incidents/${item.id}`}>
+                          Open
+                        </Link>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
