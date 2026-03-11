@@ -1,6 +1,7 @@
 import {
   addIncidentComment,
   getStatusTransitions,
+  undoIncidentStatusChange,
   updateIncident,
   updateIncidentStatus,
 } from "./incidents";
@@ -45,6 +46,50 @@ describe("incidents business rules", () => {
         priority: "p1",
         team: "Payments",
         assignee: "Ilya Petrov",
+      }),
+    ).rejects.toThrow("Viewer cannot edit incidents.");
+  });
+
+  it("allows operator to undo recent status change", async () => {
+    await updateIncidentStatus({
+      incidentId: "INC-1204",
+      nextStatus: "in_progress",
+      role: "operator",
+      actorName: "Operator",
+    });
+
+    const reverted = await undoIncidentStatusChange({
+      incidentId: "INC-1204",
+      role: "operator",
+      actorName: "Operator",
+    });
+
+    expect(reverted.status).toBe("resolved");
+  });
+
+  it("rejects undo when there is no recent status change", async () => {
+    await expect(
+      undoIncidentStatusChange({
+        incidentId: "INC-1203",
+        role: "operator",
+        actorName: "Operator",
+      }),
+    ).rejects.toThrow("No recent status change to undo.");
+  });
+
+  it("rejects undo for viewer role", async () => {
+    await updateIncidentStatus({
+      incidentId: "INC-1207",
+      nextStatus: "in_progress",
+      role: "operator",
+      actorName: "Operator",
+    });
+
+    await expect(
+      undoIncidentStatusChange({
+        incidentId: "INC-1207",
+        role: "viewer",
+        actorName: "Viewer",
       }),
     ).rejects.toThrow("Viewer cannot edit incidents.");
   });

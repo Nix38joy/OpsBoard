@@ -14,6 +14,7 @@ vi.mock("../../api/incidents", async () => {
     getIncidentDetails: vi.fn(),
     getStatusTransitions: vi.fn(),
     updateIncidentStatus: vi.fn(),
+    undoIncidentStatusChange: vi.fn(),
     addIncidentComment: vi.fn(),
     deleteIncidentComment: vi.fn(),
   };
@@ -26,6 +27,8 @@ function cloneState() {
     incident: { ...detailsState.incident },
     comments: detailsState.comments.map((comment) => ({ ...comment })),
     events: detailsState.events.map((event) => ({ ...event })),
+    lastStatusChange: detailsState.lastStatusChange ? { ...detailsState.lastStatusChange } : null,
+    statusUndoRemainingMs: detailsState.statusUndoRemainingMs ?? null,
   } satisfies IncidentDetails;
 }
 
@@ -67,6 +70,8 @@ describe("IncidentDetailsPage integration", () => {
         },
       ],
       events: [],
+      lastStatusChange: null,
+      statusUndoRemainingMs: null,
     };
 
     vi.mocked(incidentsApi.getIncidentDetails).mockImplementation(async () => cloneState());
@@ -75,10 +80,29 @@ describe("IncidentDetailsPage integration", () => {
     );
     vi.mocked(incidentsApi.updateIncidentStatus).mockImplementation(async ({ nextStatus }) => {
       detailsState.incident.status = nextStatus;
+      detailsState.lastStatusChange = {
+        previousStatus: "open",
+        nextStatus,
+        actorName: "Operator User",
+        changedAt: new Date().toISOString(),
+      };
+      detailsState.statusUndoRemainingMs = 30000;
       detailsState.events.unshift({
         id: `EV-${Date.now()}`,
         incidentId: detailsState.incident.id,
         message: `Status changed to "${nextStatus}".`,
+        createdAt: new Date().toISOString(),
+      });
+      return { ...detailsState.incident };
+    });
+    vi.mocked(incidentsApi.undoIncidentStatusChange).mockImplementation(async () => {
+      detailsState.incident.status = detailsState.lastStatusChange?.previousStatus ?? "open";
+      detailsState.lastStatusChange = null;
+      detailsState.statusUndoRemainingMs = null;
+      detailsState.events.unshift({
+        id: `EV-${Date.now()}`,
+        incidentId: detailsState.incident.id,
+        message: 'Status rolled back to "open".',
         createdAt: new Date().toISOString(),
       });
       return { ...detailsState.incident };
@@ -169,6 +193,33 @@ describe("IncidentDetailsPage integration", () => {
     await waitFor(() => {
       expect(incidentsApi.deleteIncidentComment).toHaveBeenCalled();
       expect(screen.queryByText("Initial comment")).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows undo action and calls undo API for operator", async () => {
+    useAuthStore.setState({
+      isAuthenticated: true,
+      role: "operator",
+      userName: "Operator User",
+    });
+    detailsState.incident.status = "in_progress";
+    detailsState.lastStatusChange = {
+      previousStatus: "open",
+      nextStatus: "in_progress",
+      actorName: "Operator User",
+      changedAt: "2026-03-10T10:00:00.000Z",
+    };
+    detailsState.statusUndoRemainingMs = 20000;
+
+    const user = userEvent.setup();
+    renderDetails();
+
+    const undoButton = await screen.findByRole("button", { name: /Undo last change/i });
+    expect(screen.getByText(/Last change:/)).toBeInTheDocument();
+    await user.click(undoButton);
+
+    await waitFor(() => {
+      expect(incidentsApi.undoIncidentStatusChange).toHaveBeenCalled();
     });
   });
 });
