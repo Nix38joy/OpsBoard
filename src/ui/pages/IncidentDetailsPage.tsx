@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   addIncidentComment,
@@ -23,6 +23,8 @@ export function IncidentDetailsPage() {
   const autoRefreshEnabled = useUiSettingsStore((state) => state.autoRefreshEnabled);
   const [commentDraft, setCommentDraft] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [undoDeadlineMs, setUndoDeadlineMs] = useState<number | null>(null);
+  const [undoNowMs, setUndoNowMs] = useState<number>(Date.now());
 
   const detailsQuery = useQuery({
     queryKey: ["incident", incidentId],
@@ -37,6 +39,39 @@ export function IncidentDetailsPage() {
     }
     return getStatusTransitions(detailsQuery.data.incident.status, role);
   }, [detailsQuery.data?.incident, role]);
+
+  const undoRemainingMs = useMemo(() => {
+    if (!undoDeadlineMs) {
+      return null;
+    }
+    return Math.max(0, undoDeadlineMs - undoNowMs);
+  }, [undoDeadlineMs, undoNowMs]);
+
+  useEffect(() => {
+    const remaining = detailsQuery.data?.statusUndoRemainingMs ?? null;
+    if (!remaining || remaining <= 0) {
+      setUndoDeadlineMs(null);
+      return;
+    }
+    setUndoNowMs(Date.now());
+    setUndoDeadlineMs(Date.now() + remaining);
+  }, [detailsQuery.data?.statusUndoRemainingMs]);
+
+  useEffect(() => {
+    if (!undoDeadlineMs) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      setUndoNowMs(now);
+      if (undoDeadlineMs - now <= 0) {
+        setUndoDeadlineMs(null);
+      }
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [undoDeadlineMs]);
 
   const statusMutation = useMutation({
     mutationFn: (nextStatus: IncidentStatus) =>
@@ -190,6 +225,13 @@ export function IncidentDetailsPage() {
           <section className="card section-gap">
             <h2>Status actions</h2>
             <p>Allowed transitions for role: {role}</p>
+            {detailsQuery.data.lastStatusChange && (
+              <p className="muted-text">
+                Last change: {detailsQuery.data.lastStatusChange.actorName} switched status from "
+                {detailsQuery.data.lastStatusChange.previousStatus}" to "
+                {detailsQuery.data.lastStatusChange.nextStatus}".
+              </p>
+            )}
             <div className="actions-row">
               {allowedTransitions.length === 0 && <p>No status actions available.</p>}
               {allowedTransitions.map((status) => (
@@ -204,8 +246,8 @@ export function IncidentDetailsPage() {
                 </button>
               ))}
               {canEditIncident(role) &&
-                detailsQuery.data.statusUndoRemainingMs &&
-                detailsQuery.data.statusUndoRemainingMs > 0 && (
+                undoRemainingMs &&
+                undoRemainingMs > 0 && (
                   <button
                     className="btn ghost"
                     type="button"
@@ -214,7 +256,7 @@ export function IncidentDetailsPage() {
                   >
                     {undoStatusMutation.isPending
                       ? "Undoing..."
-                      : `Undo last change (${Math.ceil(detailsQuery.data.statusUndoRemainingMs / 1000)}s)`}
+                      : `Undo last change (${Math.ceil(undoRemainingMs / 1000)}s)`}
                   </button>
                 )}
             </div>
