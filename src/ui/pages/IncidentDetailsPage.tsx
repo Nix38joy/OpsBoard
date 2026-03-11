@@ -6,6 +6,7 @@ import {
   deleteIncidentComment,
   getIncidentDetails,
   getStatusTransitions,
+  undoIncidentStatusChange,
   updateIncidentStatus,
 } from "../../api/incidents";
 import { IncidentStatus } from "../../domain/incidents";
@@ -42,6 +43,24 @@ export function IncidentDetailsPage() {
       updateIncidentStatus({
         incidentId: incidentId ?? "",
         nextStatus,
+        role: role ?? "viewer",
+        actorName: userName ?? "Unknown user",
+      }),
+    onSuccess: async () => {
+      setActionError(null);
+      await queryClient.invalidateQueries({ queryKey: ["incident", incidentId] });
+      await queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (error) => {
+      setActionError((error as Error).message);
+    },
+  });
+
+  const undoStatusMutation = useMutation({
+    mutationFn: () =>
+      undoIncidentStatusChange({
+        incidentId: incidentId ?? "",
         role: role ?? "viewer",
         actorName: userName ?? "Unknown user",
       }),
@@ -96,7 +115,10 @@ export function IncidentDetailsPage() {
     commentMutation.mutate(commentDraft);
   };
   const isAnyActionPending =
-    statusMutation.isPending || commentMutation.isPending || deleteCommentMutation.isPending;
+    statusMutation.isPending ||
+    undoStatusMutation.isPending ||
+    commentMutation.isPending ||
+    deleteCommentMutation.isPending;
 
   if (!incidentId) {
     return (
@@ -181,6 +203,20 @@ export function IncidentDetailsPage() {
                   {statusMutation.isPending ? "Updating..." : `Set ${status}`}
                 </button>
               ))}
+              {canEditIncident(role) &&
+                detailsQuery.data.statusUndoRemainingMs &&
+                detailsQuery.data.statusUndoRemainingMs > 0 && (
+                  <button
+                    className="btn ghost"
+                    type="button"
+                    disabled={isAnyActionPending}
+                    onClick={() => undoStatusMutation.mutate()}
+                  >
+                    {undoStatusMutation.isPending
+                      ? "Undoing..."
+                      : `Undo last change (${Math.ceil(detailsQuery.data.statusUndoRemainingMs / 1000)}s)`}
+                  </button>
+                )}
             </div>
           </section>
 

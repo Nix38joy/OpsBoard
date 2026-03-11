@@ -30,10 +30,19 @@ export type IncidentEvent = {
   createdAt: string;
 };
 
+export type IncidentLastStatusChange = {
+  previousStatus: IncidentStatus;
+  nextStatus: IncidentStatus;
+  changedAt: string;
+  actorName: string;
+};
+
 export type IncidentDetails = {
   incident: Incident;
   comments: IncidentComment[];
   events: IncidentEvent[];
+  lastStatusChange?: IncidentLastStatusChange | null;
+  statusUndoRemainingMs?: number | null;
 };
 
 export type IncidentsFilters = {

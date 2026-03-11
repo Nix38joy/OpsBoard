@@ -9,6 +9,7 @@ import {
   DashboardMetric,
   IncidentPriority,
   IncidentSeverity,
+  IncidentLastStatusChange,
   IncidentStatus,
 } from "../domain/incidents";
 import {
@@ -111,11 +112,13 @@ const INITIAL_INCIDENTS: Incident[] = [
 
 const STORAGE_KEY = "opsboard.incidents.storage.v1";
 const STORAGE_VERSION = 1;
+export const STATUS_UNDO_WINDOW_MS = 30_000;
 
 type PersistedIncidentsData = {
   incidents: Incident[];
   commentsByIncidentId: Record<string, IncidentComment[]>;
   eventsByIncidentId: Record<string, IncidentEvent[]>;
+  lastStatusChangeByIncidentId: Record<string, IncidentLastStatusChange>;
   counters: {
     incidentCounter: number;
     commentCounter: number;
@@ -131,6 +134,7 @@ type PersistedIncidentsEnvelope = {
 let incidentsDb: Incident[] = [];
 let commentsDb = new Map<string, IncidentComment[]>();
 let eventsDb = new Map<string, IncidentEvent[]>();
+let lastStatusChangeDb = new Map<string, IncidentLastStatusChange>();
 let commentCounter = 4000;
 let eventCounter = 7000;
 let incidentCounter = 1300;
@@ -181,6 +185,7 @@ function createDefaultData(): PersistedIncidentsData {
     incidents: [...INITIAL_INCIDENTS],
     commentsByIncidentId,
     eventsByIncidentId,
+    lastStatusChangeByIncidentId: {},
     counters: {
       incidentCounter: 1300,
       commentCounter: 4000,
@@ -211,6 +216,7 @@ function normalizePersistedData(
   const incidents = data.incidents;
   const commentsByIncidentId: Record<string, IncidentComment[]> = {};
   const eventsByIncidentId: Record<string, IncidentEvent[]> = {};
+  const lastStatusChangeByIncidentId: Record<string, IncidentLastStatusChange> = {};
 
   for (const incident of incidents) {
     commentsByIncidentId[incident.id] = data.commentsByIncidentId[incident.id] ?? [];
@@ -224,12 +230,17 @@ function normalizePersistedData(
           createdAt: incident.updatedAt,
         },
       ];
+    const lastStatusChange = data.lastStatusChangeByIncidentId?.[incident.id];
+    if (lastStatusChange) {
+      lastStatusChangeByIncidentId[incident.id] = lastStatusChange;
+    }
   }
 
   return {
     incidents,
     commentsByIncidentId,
     eventsByIncidentId,
+    lastStatusChangeByIncidentId,
     counters: {
       incidentCounter: data.counters?.incidentCounter ?? fallback.counters.incidentCounter,
       commentCounter: data.counters?.commentCounter ?? fallback.counters.commentCounter,
@@ -263,12 +274,16 @@ function saveToStorage() {
 
   const commentsByIncidentId: Record<string, IncidentComment[]> = {};
   const eventsByIncidentId: Record<string, IncidentEvent[]> = {};
+  const lastStatusChangeByIncidentId: Record<string, IncidentLastStatusChange> = {};
 
   for (const [incidentId, comments] of commentsDb.entries()) {
     commentsByIncidentId[incidentId] = comments;
   }
   for (const [incidentId, events] of eventsDb.entries()) {
     eventsByIncidentId[incidentId] = events;
+  }
+  for (const [incidentId, change] of lastStatusChangeDb.entries()) {
+    lastStatusChangeByIncidentId[incidentId] = change;
   }
 
   const payload: PersistedIncidentsEnvelope = {
@@ -277,6 +292,7 @@ function saveToStorage() {
       incidents: incidentsDb,
       commentsByIncidentId,
       eventsByIncidentId,
+      lastStatusChangeByIncidentId,
       counters: {
         incidentCounter,
         commentCounter,
@@ -295,6 +311,7 @@ function initializeData() {
     incidentsDb = fallback.incidents;
     commentsDb = new Map(Object.entries(fallback.commentsByIncidentId));
     eventsDb = new Map(Object.entries(fallback.eventsByIncidentId));
+    lastStatusChangeDb = new Map(Object.entries(fallback.lastStatusChangeByIncidentId));
     incidentCounter = fallback.counters.incidentCounter;
     commentCounter = fallback.counters.commentCounter;
     eventCounter = fallback.counters.eventCounter;
@@ -306,6 +323,7 @@ function initializeData() {
     incidentsDb = fallback.incidents;
     commentsDb = new Map(Object.entries(fallback.commentsByIncidentId));
     eventsDb = new Map(Object.entries(fallback.eventsByIncidentId));
+    lastStatusChangeDb = new Map(Object.entries(fallback.lastStatusChangeByIncidentId));
     incidentCounter = fallback.counters.incidentCounter;
     commentCounter = fallback.counters.commentCounter;
     eventCounter = fallback.counters.eventCounter;
@@ -318,6 +336,7 @@ function initializeData() {
     incidentsDb = parsed.incidents;
     commentsDb = new Map(Object.entries(parsed.commentsByIncidentId));
     eventsDb = new Map(Object.entries(parsed.eventsByIncidentId));
+    lastStatusChangeDb = new Map(Object.entries(parsed.lastStatusChangeByIncidentId ?? {}));
     incidentCounter = parsed.counters.incidentCounter;
     commentCounter = parsed.counters.commentCounter;
     eventCounter = parsed.counters.eventCounter;
@@ -325,6 +344,7 @@ function initializeData() {
     incidentsDb = fallback.incidents;
     commentsDb = new Map(Object.entries(fallback.commentsByIncidentId));
     eventsDb = new Map(Object.entries(fallback.eventsByIncidentId));
+    lastStatusChangeDb = new Map(Object.entries(fallback.lastStatusChangeByIncidentId));
     incidentCounter = fallback.counters.incidentCounter;
     commentCounter = fallback.counters.commentCounter;
     eventCounter = fallback.counters.eventCounter;
@@ -355,6 +375,26 @@ function appendEvent(incidentId: string, message: string) {
   });
   eventsDb.set(incidentId, events);
   saveToStorage();
+}
+
+function getUndoRemainingMs(change: IncidentLastStatusChange): number {
+  const ageMs = Date.now() - new Date(change.changedAt).getTime();
+  return Math.max(0, STATUS_UNDO_WINDOW_MS - ageMs);
+}
+
+function getActiveLastStatusChange(incidentId: string): IncidentLastStatusChange | null {
+  const change = lastStatusChangeDb.get(incidentId);
+  if (!change) {
+    return null;
+  }
+
+  if (getUndoRemainingMs(change) <= 0) {
+    lastStatusChangeDb.delete(incidentId);
+    saveToStorage();
+    return null;
+  }
+
+  return change;
 }
 
 function isIncidentOverdue(incident: Incident): boolean {
@@ -463,11 +503,14 @@ export async function getIncidentDetails(incidentId: string): Promise<IncidentDe
   const incident = getIncidentOrThrow(incidentId);
   const comments = commentsDb.get(incidentId) ?? [];
   const events = eventsDb.get(incidentId) ?? [];
+  const lastStatusChange = getActiveLastStatusChange(incidentId);
 
   return {
     incident: { ...incident },
     comments: [...comments],
     events: [...events],
+    lastStatusChange,
+    statusUndoRemainingMs: lastStatusChange ? getUndoRemainingMs(lastStatusChange) : null,
   };
 }
 
@@ -489,11 +532,56 @@ export async function updateIncidentStatus(params: {
     throw new Error("Status transition is not allowed for current role.");
   }
 
+  const previousStatus = incident.status;
   incident.status = params.nextStatus;
   incident.updatedAt = new Date().toISOString();
+  lastStatusChangeDb.set(params.incidentId, {
+    previousStatus,
+    nextStatus: params.nextStatus,
+    changedAt: incident.updatedAt,
+    actorName: params.actorName,
+  });
   appendEvent(
     params.incidentId,
     `${params.actorName} changed status to "${params.nextStatus}".`,
+  );
+
+  return { ...incident };
+}
+
+export async function undoIncidentStatusChange(params: {
+  incidentId: string;
+  role: AppRole;
+  actorName: string;
+}): Promise<Incident> {
+  await delay(250);
+
+  if (!canEditIncident(params.role)) {
+    throw new Error("Viewer cannot edit incidents.");
+  }
+
+  const incident = getIncidentOrThrow(params.incidentId);
+  const change = getActiveLastStatusChange(params.incidentId);
+
+  if (!change) {
+    throw new Error("No recent status change to undo.");
+  }
+
+  if (incident.status !== change.nextStatus) {
+    throw new Error("Undo is not available because status changed again.");
+  }
+
+  const allowedBack = getAllowedStatusTransitions(incident.status, params.role);
+  if (!allowedBack.includes(change.previousStatus)) {
+    throw new Error("Undo transition is not allowed for current role.");
+  }
+
+  incident.status = change.previousStatus;
+  incident.updatedAt = new Date().toISOString();
+  lastStatusChangeDb.delete(params.incidentId);
+  appendEvent(
+    params.incidentId,
+    `${params.actorName} rolled back status to "${incident.status}".`,
   );
 
   return { ...incident };
