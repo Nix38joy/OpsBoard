@@ -5,8 +5,10 @@ import { getIncidents } from "../../api/incidents";
 import { IncidentsFilters } from "../../domain/incidents";
 import { LIVE_REFRESH_INTERVAL_MS } from "../../domain/liveUpdates";
 import { useIncidentsFiltersStore } from "../../state/incidentsFiltersStore";
+import { useUiSettingsStore } from "../../state/uiSettingsStore";
 
 export function IncidentsPage() {
+  const autoRefreshEnabled = useUiSettingsStore((state) => state.autoRefreshEnabled);
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     filters,
@@ -83,7 +85,7 @@ export function IncidentsPage() {
     queryKey: ["incidents", filters],
     queryFn: () => getIncidents(filters),
     placeholderData: (previousData) => previousData,
-    refetchInterval: LIVE_REFRESH_INTERVAL_MS,
+    refetchInterval: autoRefreshEnabled ? LIVE_REFRESH_INTERVAL_MS : false,
   });
 
   const totalPages = incidentsQuery.data?.totalPages ?? 1;
@@ -106,7 +108,9 @@ export function IncidentsPage() {
     <div className="page">
       <h1>Incidents</h1>
       <p>First production-like data flow: filters + server query + pagination.</p>
-      <p className="muted-text">Live updates every 15 seconds.</p>
+      <p className="muted-text">
+        {autoRefreshEnabled ? "Live updates every 15 seconds." : "Live updates are paused."}
+      </p>
 
       <section className="card filters-card">
         <div className="filters-grid">

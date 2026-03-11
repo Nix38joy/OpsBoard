@@ -12,12 +12,14 @@ import { IncidentStatus } from "../../domain/incidents";
 import { LIVE_REFRESH_INTERVAL_MS } from "../../domain/liveUpdates";
 import { canAddComment, canDeleteComment, canEditIncident } from "../../domain/permissions";
 import { useAuthStore } from "../../state/authStore";
+import { useUiSettingsStore } from "../../state/uiSettingsStore";
 
 export function IncidentDetailsPage() {
   const { incidentId } = useParams();
   const queryClient = useQueryClient();
   const role = useAuthStore((state) => state.role);
   const userName = useAuthStore((state) => state.userName);
+  const autoRefreshEnabled = useUiSettingsStore((state) => state.autoRefreshEnabled);
   const [commentDraft, setCommentDraft] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -25,7 +27,7 @@ export function IncidentDetailsPage() {
     queryKey: ["incident", incidentId],
     queryFn: () => getIncidentDetails(incidentId ?? ""),
     enabled: Boolean(incidentId),
-    refetchInterval: LIVE_REFRESH_INTERVAL_MS,
+    refetchInterval: autoRefreshEnabled ? LIVE_REFRESH_INTERVAL_MS : false,
   });
 
   const allowedTransitions = useMemo(() => {
@@ -110,7 +112,9 @@ export function IncidentDetailsPage() {
       <p>
         Incident ID: <strong>{incidentId}</strong>
       </p>
-      <p className="muted-text">Live updates every 15 seconds.</p>
+      <p className="muted-text">
+        {autoRefreshEnabled ? "Live updates every 15 seconds." : "Live updates are paused."}
+      </p>
 
       {detailsQuery.isLoading && <p>Loading incident details...</p>}
       {detailsQuery.isFetching && !detailsQuery.isLoading && (

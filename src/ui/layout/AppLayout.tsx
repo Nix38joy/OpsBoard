@@ -1,11 +1,14 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { canCreateIncident } from "../../domain/permissions";
 import { useAuthStore } from "../../state/authStore";
+import { useUiSettingsStore } from "../../state/uiSettingsStore";
 
 export function AppLayout() {
   const role = useAuthStore((state) => state.role);
   const userName = useAuthStore((state) => state.userName);
   const logout = useAuthStore((state) => state.logout);
+  const autoRefreshEnabled = useUiSettingsStore((state) => state.autoRefreshEnabled);
+  const setAutoRefreshEnabled = useUiSettingsStore((state) => state.setAutoRefreshEnabled);
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -20,6 +23,14 @@ export function AppLayout() {
           OpsBoard
         </Link>
         <div className="topbar-right">
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={autoRefreshEnabled}
+              onChange={(event) => setAutoRefreshEnabled(event.target.checked)}
+            />
+            <span>Auto-refresh</span>
+          </label>
           <span className="badge">role: {role}</span>
           <span>{userName}</span>
           <button className="btn ghost" type="button" onClick={handleLogout}>
