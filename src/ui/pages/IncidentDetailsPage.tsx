@@ -9,6 +9,7 @@ import {
   updateIncidentStatus,
 } from "../../api/incidents";
 import { IncidentStatus } from "../../domain/incidents";
+import { LIVE_REFRESH_INTERVAL_MS } from "../../domain/liveUpdates";
 import { canAddComment, canDeleteComment, canEditIncident } from "../../domain/permissions";
 import { useAuthStore } from "../../state/authStore";
 
@@ -24,6 +25,7 @@ export function IncidentDetailsPage() {
     queryKey: ["incident", incidentId],
     queryFn: () => getIncidentDetails(incidentId ?? ""),
     enabled: Boolean(incidentId),
+    refetchInterval: LIVE_REFRESH_INTERVAL_MS,
   });
 
   const allowedTransitions = useMemo(() => {
@@ -108,8 +110,12 @@ export function IncidentDetailsPage() {
       <p>
         Incident ID: <strong>{incidentId}</strong>
       </p>
+      <p className="muted-text">Live updates every 15 seconds.</p>
 
       {detailsQuery.isLoading && <p>Loading incident details...</p>}
+      {detailsQuery.isFetching && !detailsQuery.isLoading && (
+        <p className="muted-text">Refreshing incident data...</p>
+      )}
       {detailsQuery.isError && (
         <p className="error-text">Could not load details. Please go back and try again.</p>
       )}

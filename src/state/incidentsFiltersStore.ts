@@ -48,9 +48,9 @@ export const useIncidentsFiltersStore = create<IncidentsFiltersState>((set) => (
       filters: DEFAULT_FILTERS,
     }),
   setFromUrl: (params) =>
-    set((state) => ({
+    set(() => ({
       filters: {
-        ...state.filters,
+        ...DEFAULT_FILTERS,
         ...params,
       },
     })),

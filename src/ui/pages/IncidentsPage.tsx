@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { getIncidents } from "../../api/incidents";
 import { IncidentsFilters } from "../../domain/incidents";
+import { LIVE_REFRESH_INTERVAL_MS } from "../../domain/liveUpdates";
 import { useIncidentsFiltersStore } from "../../state/incidentsFiltersStore";
 
 export function IncidentsPage() {
@@ -82,12 +83,19 @@ export function IncidentsPage() {
     queryKey: ["incidents", filters],
     queryFn: () => getIncidents(filters),
     placeholderData: (previousData) => previousData,
+    refetchInterval: LIVE_REFRESH_INTERVAL_MS,
   });
 
   const totalPages = incidentsQuery.data?.totalPages ?? 1;
   const canGoPrev = filters.page > 1;
   const canGoNext = filters.page < totalPages;
   const isRefreshing = incidentsQuery.isFetching && !incidentsQuery.isLoading;
+
+  useEffect(() => {
+    if (incidentsQuery.data && filters.page > incidentsQuery.data.totalPages) {
+      setPage(incidentsQuery.data.totalPages);
+    }
+  }, [filters.page, incidentsQuery.data, setPage]);
 
   const handleReset = () => {
     resetFilters();
@@ -98,6 +106,7 @@ export function IncidentsPage() {
     <div className="page">
       <h1>Incidents</h1>
       <p>First production-like data flow: filters + server query + pagination.</p>
+      <p className="muted-text">Live updates every 15 seconds.</p>
 
       <section className="card filters-card">
         <div className="filters-grid">
