@@ -11,6 +11,7 @@ import {
   updateIncidentStatus,
 } from "../../api/incidents";
 import { IncidentStatus } from "../../domain/incidents";
+import { useI18n } from "../../i18n/useI18n";
 import { LIVE_REFRESH_INTERVAL_MS } from "../../domain/liveUpdates";
 import {
   canAddComment,
@@ -28,6 +29,7 @@ export function IncidentDetailsPage() {
   const role = useAuthStore((state) => state.role);
   const userName = useAuthStore((state) => state.userName);
   const autoRefreshEnabled = useUiSettingsStore((state) => state.autoRefreshEnabled);
+  const { t } = useI18n();
   const [commentDraft, setCommentDraft] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
   const [undoDeadlineMs, setUndoDeadlineMs] = useState<number | null>(null);
@@ -46,6 +48,22 @@ export function IncidentDetailsPage() {
     }
     return getStatusTransitions(detailsQuery.data.incident.status, role);
   }, [detailsQuery.data?.incident, role]);
+
+  const statusLabelByValue: Record<IncidentStatus, string> = {
+    open: t("statusOpen"),
+    in_progress: t("statusInProgress"),
+    resolved: t("statusResolved"),
+    closed: t("statusClosed"),
+  };
+  const severityLabelByValue: Record<
+    "low" | "medium" | "high" | "critical",
+    string
+  > = {
+    low: t("severityLow"),
+    medium: t("severityMedium"),
+    high: t("severityHigh"),
+    critical: t("severityCritical"),
+  };
 
   const undoRemainingMs = useMemo(() => {
     if (!undoDeadlineMs) {
@@ -183,7 +201,7 @@ export function IncidentDetailsPage() {
 
   const handleDeleteIncident = () => {
     const confirmed = window.confirm(
-      "Delete this incident permanently? This action cannot be undone.",
+      t("detailsDeleteConfirm"),
     );
     if (!confirmed) {
       return;
@@ -194,19 +212,19 @@ export function IncidentDetailsPage() {
   if (!incidentId) {
     return (
       <div className="page">
-        <p className="error-text">Invalid incident id.</p>
+        <p className="error-text">{t("detailsInvalidId")}</p>
       </div>
     );
   }
 
   return (
     <div className="page">
-      <h1>Incident Details</h1>
+      <h1>{t("detailsTitle")}</h1>
       <p>
-        Incident ID: <strong>{incidentId}</strong>
+        {t("detailsIncidentId")}: <strong>{incidentId}</strong>
       </p>
       <p className="muted-text">
-        {autoRefreshEnabled ? "Live updates every 15 seconds." : "Live updates are paused."}
+        {autoRefreshEnabled ? t("commonLiveUpdatesOn") : t("commonLiveUpdatesOff")}
       </p>
       <div className="actions-row">
         <button
@@ -215,16 +233,16 @@ export function IncidentDetailsPage() {
           onClick={() => void detailsQuery.refetch()}
           disabled={detailsQuery.isFetching}
         >
-          {detailsQuery.isFetching ? "Refreshing..." : "Refresh now"}
+          {detailsQuery.isFetching ? t("commonRefreshing") : t("commonRefreshNow")}
         </button>
       </div>
 
-      {detailsQuery.isLoading && <p>Loading incident details...</p>}
+      {detailsQuery.isLoading && <p>{t("detailsLoading")}</p>}
       {detailsQuery.isFetching && !detailsQuery.isLoading && (
-        <p className="muted-text">Refreshing incident data...</p>
+        <p className="muted-text">{t("detailsRefreshing")}</p>
       )}
       {detailsQuery.isError && (
-        <p className="error-text">Could not load details. Please go back and try again.</p>
+        <p className="error-text">{t("detailsLoadError")}</p>
       )}
       {!detailsQuery.isLoading && !detailsQuery.isError && detailsQuery.data && (
         <>
@@ -232,39 +250,41 @@ export function IncidentDetailsPage() {
           <section className="card details-grid">
             <div>
               <p>
-                <strong>Title:</strong> {detailsQuery.data.incident.title}
+                <strong>{t("formTitle")}:</strong> {detailsQuery.data.incident.title}
               </p>
               <p>
-                <strong>Status:</strong> {detailsQuery.data.incident.status}
+                <strong>{t("incidentsStatus")}:</strong>{" "}
+                {statusLabelByValue[detailsQuery.data.incident.status]}
               </p>
               <p>
-                <strong>Severity:</strong> {detailsQuery.data.incident.severity}
+                <strong>{t("incidentsSeverity")}:</strong>{" "}
+                {severityLabelByValue[detailsQuery.data.incident.severity]}
               </p>
               <p>
-                <strong>Priority:</strong> {detailsQuery.data.incident.priority}
+                <strong>{t("formPriority")}:</strong> {detailsQuery.data.incident.priority}
               </p>
             </div>
             <div>
               <p>
-                <strong>Team:</strong> {detailsQuery.data.incident.team}
+                <strong>{t("incidentsTableTeam")}:</strong> {detailsQuery.data.incident.team}
               </p>
               <p>
-                <strong>Assignee:</strong> {detailsQuery.data.incident.assignee}
+                <strong>{t("incidentsTableAssignee")}:</strong> {detailsQuery.data.incident.assignee}
               </p>
               <p>
-                <strong>Updated:</strong>{" "}
+                <strong>{t("incidentsTableUpdated")}:</strong>{" "}
                 {new Date(detailsQuery.data.incident.updatedAt).toLocaleString()}
               </p>
             </div>
           </section>
 
           <section className="card section-gap">
-            <h2>Description</h2>
+            <h2>{t("detailsSectionDescription")}</h2>
             <p>{detailsQuery.data.incident.description}</p>
             <div className="actions-row section-link-row">
               {canEditIncident(role) && (
                 <Link className="btn ghost" to={`/incidents/${incidentId}/edit`}>
-                  Edit incident
+                  {t("detailsEditIncident")}
                 </Link>
               )}
               {canDeleteIncident(role) && (
@@ -274,24 +294,30 @@ export function IncidentDetailsPage() {
                   disabled={isAnyActionPending}
                   onClick={handleDeleteIncident}
                 >
-                  {deleteIncidentMutation.isPending ? "Deleting..." : "Delete incident"}
+                  {deleteIncidentMutation.isPending
+                    ? t("detailsDeletingIncident")
+                    : t("detailsDeleteIncident")}
                 </button>
               )}
             </div>
           </section>
 
           <section className="card section-gap">
-            <h2>Status actions</h2>
-            <p>Allowed transitions for role: {role}</p>
+            <h2>{t("detailsSectionStatusActions")}</h2>
+            <p>
+              {t("detailsAllowedTransitions")}: {role}
+            </p>
             {detailsQuery.data.lastStatusChange && (
               <p className="muted-text">
-                Last change: {detailsQuery.data.lastStatusChange.actorName} switched status from "
-                {detailsQuery.data.lastStatusChange.previousStatus}" to "
-                {detailsQuery.data.lastStatusChange.nextStatus}".
+                {t("detailsLastChange", {
+                  actor: detailsQuery.data.lastStatusChange.actorName,
+                  from: statusLabelByValue[detailsQuery.data.lastStatusChange.previousStatus],
+                  to: statusLabelByValue[detailsQuery.data.lastStatusChange.nextStatus],
+                })}
               </p>
             )}
             <div className="actions-row">
-              {allowedTransitions.length === 0 && <p>No status actions available.</p>}
+              {allowedTransitions.length === 0 && <p>{t("detailsNoStatusActions")}</p>}
               {allowedTransitions.map((status) => (
                 <button
                   key={status}
@@ -300,7 +326,9 @@ export function IncidentDetailsPage() {
                   disabled={isAnyActionPending}
                   onClick={() => statusMutation.mutate(status)}
                 >
-                  {statusMutation.isPending ? "Updating..." : `Set ${status}`}
+                  {statusMutation.isPending
+                    ? t("detailsUpdatingStatus")
+                    : `${t("detailsSetStatus")} ${statusLabelByValue[status]}`}
                 </button>
               ))}
               {canEditIncident(role) &&
@@ -313,21 +341,23 @@ export function IncidentDetailsPage() {
                     onClick={() => undoStatusMutation.mutate()}
                   >
                     {undoStatusMutation.isPending
-                      ? "Undoing..."
-                      : `Undo last change (${Math.ceil(undoRemainingMs / 1000)}s)`}
+                      ? t("detailsUndoing")
+                      : t("detailsUndoLastChange", {
+                          seconds: Math.ceil(undoRemainingMs / 1000),
+                        })}
                   </button>
                 )}
             </div>
           </section>
 
           <section className="card section-gap">
-            <h2>Comments</h2>
+            <h2>{t("detailsSectionComments")}</h2>
             <form onSubmit={onCommentSubmit}>
               <textarea
                 className="textarea"
                 value={commentDraft}
                 onChange={(event) => setCommentDraft(event.target.value)}
-                placeholder="Write a comment (for operator/admin)"
+                placeholder={t("detailsCommentPlaceholder")}
                 disabled={!canAddComment(role) || isAnyActionPending}
               />
               <button
@@ -335,12 +365,12 @@ export function IncidentDetailsPage() {
                 type="submit"
                 disabled={!canAddComment(role) || isAnyActionPending}
               >
-                {commentMutation.isPending ? "Sending..." : "Add comment"}
+                {commentMutation.isPending ? t("detailsSendingComment") : t("detailsAddComment")}
               </button>
             </form>
-            {!canAddComment(role) && <p className="muted-text">Viewer role can only read comments.</p>}
+            {!canAddComment(role) && <p className="muted-text">{t("detailsViewerReadOnly")}</p>}
             {detailsQuery.data.comments.length === 0 ? (
-              <p>No comments yet.</p>
+              <p>{t("detailsNoComments")}</p>
             ) : (
               <ul className="stack-list">
                 {detailsQuery.data.comments.map((comment) => (
@@ -357,7 +387,9 @@ export function IncidentDetailsPage() {
                         disabled={isAnyActionPending}
                         onClick={() => deleteCommentMutation.mutate(comment.id)}
                       >
-                        {deleteCommentMutation.isPending ? "Deleting..." : "Delete comment"}
+                        {deleteCommentMutation.isPending
+                          ? t("detailsDeletingComment")
+                          : t("detailsDeleteComment")}
                       </button>
                     )}
                   </li>
@@ -367,9 +399,9 @@ export function IncidentDetailsPage() {
           </section>
 
           <section className="card section-gap">
-            <h2>Timeline</h2>
+            <h2>{t("detailsSectionTimeline")}</h2>
             {detailsQuery.data.events.length === 0 ? (
-              <p>No events yet.</p>
+              <p>{t("detailsNoEvents")}</p>
             ) : (
               <ul className="stack-list">
                 {detailsQuery.data.events.map((event) => (
@@ -385,7 +417,7 @@ export function IncidentDetailsPage() {
       )}
 
       <Link className="btn ghost page-bottom-action" to="/incidents">
-        Back to incidents
+        {t("detailsBackToIncidents")}
       </Link>
     </div>
   );

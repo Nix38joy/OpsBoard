@@ -2,9 +2,11 @@ import { FormEvent, useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { loginRequest } from "../../api/auth";
+import { useI18n } from "../../i18n/useI18n";
 import { AppRole, useAuthStore } from "../../state/authStore";
 
 export function LoginPage() {
+  const { t } = useI18n();
   const [userName, setUserName] = useState("Middle React Dev");
   const [role, setRole] = useState<AppRole>("operator");
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -32,9 +34,9 @@ export function LoginPage() {
   return (
     <div className="page center-page">
       <form className="card login-card" onSubmit={onSubmit}>
-        <h1>OpsBoard Login</h1>
+        <h1>{t("loginTitle")}</h1>
         <label className="field">
-          <span>User name</span>
+          <span>{t("loginUserName")}</span>
           <input
             className="input"
             value={userName}
@@ -43,22 +45,22 @@ export function LoginPage() {
           />
         </label>
         <label className="field">
-          <span>Role</span>
+          <span>{t("loginRole")}</span>
           <select
             className="input"
             value={role}
             onChange={(event) => setRole(event.target.value as AppRole)}
           >
-            <option value="viewer">Viewer</option>
-            <option value="operator">Operator</option>
-            <option value="admin">Admin</option>
+            <option value="viewer">{t("loginViewer")}</option>
+            <option value="operator">{t("loginOperator")}</option>
+            <option value="admin">{t("loginAdmin")}</option>
           </select>
         </label>
         {loginMutation.isError && (
           <p className="error-text">{(loginMutation.error as Error).message}</p>
         )}
         <button className="btn" type="submit" disabled={loginMutation.isPending}>
-          {loginMutation.isPending ? "Signing in..." : "Sign in"}
+          {loginMutation.isPending ? t("loginSigningIn") : t("loginSignIn")}
         </button>
       </form>
     </div>

@@ -3,17 +3,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { createIncident, getIncidentFormOptions } from "../../api/incidents";
+import { useI18n } from "../../i18n/useI18n";
 import { useAuthStore } from "../../state/authStore";
 import {
   INCIDENT_FORM_DEFAULT_VALUES,
   IncidentFormValues,
-  incidentFormSchema,
+  createIncidentFormSchema,
 } from "../forms/incidentFormSchema";
 
 export function IncidentCreatePage() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const userName = useAuthStore((state) => state.userName) ?? "Unknown user";
+  const incidentFormSchema = createIncidentFormSchema(t);
 
   const form = useForm<IncidentFormValues>({
     resolver: zodResolver(incidentFormSchema),
@@ -45,19 +48,19 @@ export function IncidentCreatePage() {
 
   return (
     <div className="page">
-      <h1>Create Incident</h1>
-      <p>Production-like form with schema validation and mutation flow.</p>
+      <h1>{t("createTitle")}</h1>
+      <p>{t("createSubtitle")}</p>
 
       <form className="card form-grid" onSubmit={onSubmit}>
-        {optionsQuery.isLoading && <p className="muted-text">Loading teams and assignees...</p>}
+        {optionsQuery.isLoading && <p className="muted-text">{t("formLoadingOptions")}</p>}
         <label className="field">
-          <span>Title</span>
+          <span>{t("formTitle")}</span>
           <input className="input" {...form.register("title")} />
           {errors.title && <span className="field-error">{errors.title.message}</span>}
         </label>
 
         <label className="field">
-          <span>Description</span>
+          <span>{t("formDescription")}</span>
           <textarea className="textarea" {...form.register("description")} />
           {errors.description && (
             <span className="field-error">{errors.description.message}</span>
@@ -66,17 +69,17 @@ export function IncidentCreatePage() {
 
         <div className="form-row">
           <label className="field">
-            <span>Severity</span>
+            <span>{t("formSeverity")}</span>
             <select className="input" {...form.register("severity")}>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
+              <option value="low">{t("severityLow")}</option>
+              <option value="medium">{t("severityMedium")}</option>
+              <option value="high">{t("severityHigh")}</option>
+              <option value="critical">{t("severityCritical")}</option>
             </select>
           </label>
 
           <label className="field">
-            <span>Priority</span>
+            <span>{t("formPriority")}</span>
             <select className="input" {...form.register("priority")}>
               <option value="p1">P1</option>
               <option value="p2">P2</option>
@@ -88,9 +91,9 @@ export function IncidentCreatePage() {
 
         <div className="form-row">
           <label className="field">
-            <span>Team</span>
+            <span>{t("formTeam")}</span>
             <select className="input" {...form.register("team")} disabled={optionsQuery.isLoading}>
-              <option value="">Select team</option>
+              <option value="">{t("formSelectTeam")}</option>
               {(optionsQuery.data?.teams ?? []).map((team) => (
                 <option key={team} value={team}>
                   {team}
@@ -101,13 +104,13 @@ export function IncidentCreatePage() {
           </label>
 
           <label className="field">
-            <span>Assignee</span>
+            <span>{t("formAssignee")}</span>
             <select
               className="input"
               {...form.register("assignee")}
               disabled={optionsQuery.isLoading}
             >
-              <option value="">Select assignee</option>
+              <option value="">{t("formSelectAssignee")}</option>
               {(optionsQuery.data?.assignees ?? []).map((assignee) => (
                 <option key={assignee} value={assignee}>
                   {assignee}
@@ -128,7 +131,7 @@ export function IncidentCreatePage() {
             type="submit"
             disabled={createMutation.isPending || optionsQuery.isLoading}
           >
-            {createMutation.isPending ? "Creating..." : "Create incident"}
+            {createMutation.isPending ? t("creatingButton") : t("createButton")}
           </button>
         </div>
       </form>

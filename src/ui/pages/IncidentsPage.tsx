@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { getIncidents } from "../../api/incidents";
+import { useI18n } from "../../i18n/useI18n";
 import { IncidentsFilters } from "../../domain/incidents";
 import { LIVE_REFRESH_INTERVAL_MS } from "../../domain/liveUpdates";
 import { useIncidentsFiltersStore } from "../../state/incidentsFiltersStore";
@@ -9,6 +10,7 @@ import { useUiSettingsStore } from "../../state/uiSettingsStore";
 
 export function IncidentsPage() {
   const autoRefreshEnabled = useUiSettingsStore((state) => state.autoRefreshEnabled);
+  const { t } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     filters,
@@ -104,12 +106,27 @@ export function IncidentsPage() {
     setSearchParams({}, { replace: true });
   };
 
+  const statusLabelByValue: Record<IncidentsFilters["status"], string> = {
+    all: t("statusAll"),
+    open: t("statusOpen"),
+    in_progress: t("statusInProgress"),
+    resolved: t("statusResolved"),
+    closed: t("statusClosed"),
+  };
+  const severityLabelByValue: Record<IncidentsFilters["severity"], string> = {
+    all: t("severityAll"),
+    low: t("severityLow"),
+    medium: t("severityMedium"),
+    high: t("severityHigh"),
+    critical: t("severityCritical"),
+  };
+
   return (
     <div className="page">
-      <h1>Incidents</h1>
-      <p>First production-like data flow: filters + server query + pagination.</p>
+      <h1>{t("incidentsTitle")}</h1>
+      <p>{t("incidentsSubtitle")}</p>
       <p className="muted-text">
-        {autoRefreshEnabled ? "Live updates every 15 seconds." : "Live updates are paused."}
+        {autoRefreshEnabled ? t("commonLiveUpdatesOn") : t("commonLiveUpdatesOff")}
       </p>
       <div className="actions-row">
         <button
@@ -118,37 +135,37 @@ export function IncidentsPage() {
           onClick={() => void incidentsQuery.refetch()}
           disabled={incidentsQuery.isFetching}
         >
-          {incidentsQuery.isFetching ? "Refreshing..." : "Refresh now"}
+          {incidentsQuery.isFetching ? t("commonRefreshing") : t("commonRefreshNow")}
         </button>
       </div>
 
       <section className="card filters-card">
         <div className="filters-grid">
           <label className="field">
-            <span>Search</span>
+            <span>{t("incidentsSearch")}</span>
             <input
               className="input"
-              placeholder="id or title"
+              placeholder={t("incidentsSearchPlaceholder")}
               value={filters.search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </label>
           <label className="field">
-            <span>Status</span>
+            <span>{t("incidentsStatus")}</span>
             <select
               className="input"
               value={filters.status}
               onChange={(event) => setStatus(event.target.value as IncidentsFilters["status"])}
             >
-              <option value="all">All</option>
-              <option value="open">Open</option>
-              <option value="in_progress">In progress</option>
-              <option value="resolved">Resolved</option>
-              <option value="closed">Closed</option>
+              <option value="all">{t("statusAll")}</option>
+              <option value="open">{t("statusOpen")}</option>
+              <option value="in_progress">{t("statusInProgress")}</option>
+              <option value="resolved">{t("statusResolved")}</option>
+              <option value="closed">{t("statusClosed")}</option>
             </select>
           </label>
           <label className="field">
-            <span>Severity</span>
+            <span>{t("incidentsSeverity")}</span>
             <select
               className="input"
               value={filters.severity}
@@ -156,53 +173,53 @@ export function IncidentsPage() {
                 setSeverity(event.target.value as IncidentsFilters["severity"])
               }
             >
-              <option value="all">All</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
+              <option value="all">{t("severityAll")}</option>
+              <option value="low">{t("severityLow")}</option>
+              <option value="medium">{t("severityMedium")}</option>
+              <option value="high">{t("severityHigh")}</option>
+              <option value="critical">{t("severityCritical")}</option>
             </select>
           </label>
           <label className="field">
-            <span>Flags</span>
+            <span>{t("incidentsFlags")}</span>
             <label className="checkbox-row">
               <input
                 type="checkbox"
                 checked={filters.overdueOnly}
                 onChange={(event) => setOverdueOnly(event.target.checked)}
               />
-              <span>Overdue only</span>
+              <span>{t("incidentsOverdueOnly")}</span>
             </label>
           </label>
         </div>
         <button className="btn ghost" type="button" onClick={handleReset}>
-          Reset filters
+          {t("incidentsResetFilters")}
         </button>
       </section>
 
       <div className="card">
-        {incidentsQuery.isLoading && <p>Loading incidents...</p>}
-        {isRefreshing && <p className="muted-text">Updating results...</p>}
+        {incidentsQuery.isLoading && <p>{t("incidentsLoading")}</p>}
+        {isRefreshing && <p className="muted-text">{t("incidentsUpdating")}</p>}
         {incidentsQuery.isError && (
-          <p className="error-text">Could not load incidents. Try refreshing the page.</p>
+          <p className="error-text">{t("incidentsLoadError")}</p>
         )}
         {!incidentsQuery.isLoading && !incidentsQuery.isError && incidentsQuery.data && (
           <>
             {incidentsQuery.data.items.length === 0 ? (
-              <p>No incidents found for current filters.</p>
+              <p>{t("incidentsEmpty")}</p>
             ) : (
               <table className="table">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Title</th>
-                    <th>Severity</th>
-                    <th>Priority</th>
-                    <th>Status</th>
-                    <th>Team</th>
-                    <th>Assignee</th>
-                    <th>Updated</th>
-                    <th>Actions</th>
+                    <th>{t("incidentsTableId")}</th>
+                    <th>{t("incidentsTableTitle")}</th>
+                    <th>{t("incidentsSeverity")}</th>
+                    <th>{t("incidentsTablePriority")}</th>
+                    <th>{t("incidentsStatus")}</th>
+                    <th>{t("incidentsTableTeam")}</th>
+                    <th>{t("incidentsTableAssignee")}</th>
+                    <th>{t("incidentsTableUpdated")}</th>
+                    <th>{t("incidentsTableActions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -213,20 +230,24 @@ export function IncidentsPage() {
                       </td>
                       <td>{item.title}</td>
                       <td>
-                        <span className={`pill pill-severity-${item.severity}`}>{item.severity}</span>
+                        <span className={`pill pill-severity-${item.severity}`}>
+                          {severityLabelByValue[item.severity]}
+                        </span>
                       </td>
                       <td>
                         <span className="pill pill-priority">{item.priority.toUpperCase()}</span>
                       </td>
                       <td>
-                        <span className={`pill pill-status-${item.status}`}>{item.status}</span>
+                        <span className={`pill pill-status-${item.status}`}>
+                          {statusLabelByValue[item.status]}
+                        </span>
                       </td>
                       <td>{item.team}</td>
                       <td>{item.assignee}</td>
                       <td>{new Date(item.updatedAt).toLocaleString()}</td>
                       <td>
                         <Link className="table-action-link" to={`/incidents/${item.id}`}>
-                          Open
+                          {t("incidentsOpen")}
                         </Link>
                       </td>
                     </tr>
@@ -237,7 +258,7 @@ export function IncidentsPage() {
 
             <div className="table-footer">
               <p>
-                Total: <strong>{incidentsQuery.data.total}</strong>
+                {t("incidentsTotal")}: <strong>{incidentsQuery.data.total}</strong>
               </p>
               <div className="pagination">
                 <button
@@ -246,10 +267,10 @@ export function IncidentsPage() {
                   disabled={!canGoPrev}
                   onClick={() => setPage(filters.page - 1)}
                 >
-                  Prev
+                  {t("incidentsPrev")}
                 </button>
                 <span>
-                  Page {filters.page} / {totalPages}
+                  {t("incidentsPage")} {filters.page} / {totalPages}
                 </span>
                 <button
                   className="btn ghost"
@@ -257,7 +278,7 @@ export function IncidentsPage() {
                   disabled={!canGoNext}
                   onClick={() => setPage(filters.page + 1)}
                 >
-                  Next
+                  {t("incidentsNext")}
                 </button>
               </div>
             </div>

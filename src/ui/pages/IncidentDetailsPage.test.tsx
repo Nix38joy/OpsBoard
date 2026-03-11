@@ -156,7 +156,7 @@ describe("IncidentDetailsPage integration", () => {
     renderDetails();
 
     expect(await screen.findByText("Test incident")).toBeInTheDocument();
-    await user.click(await screen.findByRole("button", { name: "Set in_progress" }));
+    await user.click(await screen.findByRole("button", { name: /Set .*progress/i }));
 
     await waitFor(() => {
       expect(incidentsApi.updateIncidentStatus).toHaveBeenCalled();

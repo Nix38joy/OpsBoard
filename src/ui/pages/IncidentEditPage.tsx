@@ -4,15 +4,18 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getIncidentDetails, getIncidentFormOptions, updateIncident } from "../../api/incidents";
+import { useI18n } from "../../i18n/useI18n";
 import { useAuthStore } from "../../state/authStore";
-import { IncidentFormValues, incidentFormSchema } from "../forms/incidentFormSchema";
+import { createIncidentFormSchema, IncidentFormValues } from "../forms/incidentFormSchema";
 
 export function IncidentEditPage() {
+  const { t } = useI18n();
   const { incidentId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const role = useAuthStore((state) => state.role) ?? "viewer";
   const userName = useAuthStore((state) => state.userName) ?? "Unknown user";
+  const incidentFormSchema = createIncidentFormSchema(t);
 
   const form = useForm<IncidentFormValues>({
     resolver: zodResolver(incidentFormSchema),
@@ -64,25 +67,25 @@ export function IncidentEditPage() {
   });
 
   if (!incidentId) {
-    return <p className="error-text">Invalid incident id.</p>;
+    return <p className="error-text">{t("detailsInvalidId")}</p>;
   }
 
   return (
     <div className="page">
-      <h1>Edit Incident</h1>
+      <h1>{t("editTitle")}</h1>
       <p>
-        Update fields for incident <strong>{incidentId}</strong>.
+        {t("editSubtitle", { id: incidentId })}
       </p>
 
-      {detailsQuery.isLoading && <p>Loading incident data...</p>}
+      {detailsQuery.isLoading && <p>{t("editLoading")}</p>}
       {detailsQuery.isError && (
-        <p className="error-text">Could not load incident for editing. Try again later.</p>
+        <p className="error-text">{t("editLoadError")}</p>
       )}
       {!detailsQuery.isLoading && !detailsQuery.isError && detailsQuery.data && (
         <form className="card form-grid" onSubmit={onSubmit}>
-          {optionsQuery.isLoading && <p className="muted-text">Loading teams and assignees...</p>}
+          {optionsQuery.isLoading && <p className="muted-text">{t("formLoadingOptions")}</p>}
           <label className="field">
-            <span>Title</span>
+            <span>{t("formTitle")}</span>
             <input className="input" {...form.register("title")} />
             {form.formState.errors.title && (
               <span className="field-error">{form.formState.errors.title.message}</span>
@@ -90,7 +93,7 @@ export function IncidentEditPage() {
           </label>
 
           <label className="field">
-            <span>Description</span>
+            <span>{t("formDescription")}</span>
             <textarea className="textarea" {...form.register("description")} />
             {form.formState.errors.description && (
               <span className="field-error">{form.formState.errors.description.message}</span>
@@ -99,17 +102,17 @@ export function IncidentEditPage() {
 
           <div className="form-row">
             <label className="field">
-              <span>Severity</span>
+              <span>{t("formSeverity")}</span>
               <select className="input" {...form.register("severity")}>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
+                <option value="low">{t("severityLow")}</option>
+                <option value="medium">{t("severityMedium")}</option>
+                <option value="high">{t("severityHigh")}</option>
+                <option value="critical">{t("severityCritical")}</option>
               </select>
             </label>
 
             <label className="field">
-              <span>Priority</span>
+              <span>{t("formPriority")}</span>
               <select className="input" {...form.register("priority")}>
                 <option value="p1">P1</option>
                 <option value="p2">P2</option>
@@ -121,9 +124,9 @@ export function IncidentEditPage() {
 
           <div className="form-row">
             <label className="field">
-              <span>Team</span>
+              <span>{t("formTeam")}</span>
               <select className="input" {...form.register("team")} disabled={optionsQuery.isLoading}>
-                <option value="">Select team</option>
+                <option value="">{t("formSelectTeam")}</option>
                 {(optionsQuery.data?.teams ?? []).map((team) => (
                   <option key={team} value={team}>
                     {team}
@@ -136,13 +139,13 @@ export function IncidentEditPage() {
             </label>
 
             <label className="field">
-              <span>Assignee</span>
+              <span>{t("formAssignee")}</span>
               <select
                 className="input"
                 {...form.register("assignee")}
                 disabled={optionsQuery.isLoading}
               >
-                <option value="">Select assignee</option>
+                <option value="">{t("formSelectAssignee")}</option>
                 {(optionsQuery.data?.assignees ?? []).map((assignee) => (
                   <option key={assignee} value={assignee}>
                     {assignee}
@@ -162,10 +165,10 @@ export function IncidentEditPage() {
               type="submit"
               disabled={editMutation.isPending || optionsQuery.isLoading}
             >
-              {editMutation.isPending ? "Saving..." : "Save changes"}
+              {editMutation.isPending ? t("editSaving") : t("editSave")}
             </button>
             <Link className="btn ghost" to={`/incidents/${incidentId}`}>
-              Cancel
+              {t("editCancel")}
             </Link>
           </div>
         </form>

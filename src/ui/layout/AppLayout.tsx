@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useI18n } from "../../i18n/useI18n";
 import { canCreateIncident } from "../../domain/permissions";
 import { useAuthStore } from "../../state/authStore";
 import { useUiSettingsStore } from "../../state/uiSettingsStore";
@@ -9,6 +10,7 @@ export function AppLayout() {
   const logout = useAuthStore((state) => state.logout);
   const autoRefreshEnabled = useUiSettingsStore((state) => state.autoRefreshEnabled);
   const setAutoRefreshEnabled = useUiSettingsStore((state) => state.setAutoRefreshEnabled);
+  const { language, setLanguage, t } = useI18n();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -24,17 +26,30 @@ export function AppLayout() {
         </Link>
         <div className="topbar-right">
           <label className="checkbox-row">
+            <span>{t("navLanguage")}</span>
+            <select
+              className="input language-select"
+              value={language}
+              onChange={(event) => setLanguage(event.target.value as "en" | "ru")}
+            >
+              <option value="en">EN</option>
+              <option value="ru">RU</option>
+            </select>
+          </label>
+          <label className="checkbox-row">
             <input
               type="checkbox"
               checked={autoRefreshEnabled}
               onChange={(event) => setAutoRefreshEnabled(event.target.checked)}
             />
-            <span>Auto-refresh</span>
+            <span>{t("navAutoRefresh")}</span>
           </label>
-          <span className="badge">role: {role}</span>
+          <span className="badge">
+            {t("navRole")}: {role}
+          </span>
           <span>{userName}</span>
           <button className="btn ghost" type="button" onClick={handleLogout}>
-            Logout
+            {t("navLogout")}
           </button>
         </div>
       </header>
@@ -42,14 +57,14 @@ export function AppLayout() {
       <div className="content-shell">
         <aside className="sidebar">
           <NavLink className="nav-item" to="/dashboard">
-            Dashboard
+            {t("navDashboard")}
           </NavLink>
           <NavLink className="nav-item" to="/incidents">
-            Incidents
+            {t("navIncidents")}
           </NavLink>
           {canCreateIncident(role) && (
             <NavLink className="nav-item" to="/incidents/new">
-              Create Incident
+              {t("navCreateIncident")}
             </NavLink>
           )}
         </aside>
