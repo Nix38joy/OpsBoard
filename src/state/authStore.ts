@@ -12,7 +12,7 @@ function readSession(): AuthSession | null {
 
   try {
     const parsed = JSON.parse(raw) as AuthSession;
-    if (!parsed.userName || !parsed.role) {
+    if (!parsed.userName || !parsed.email || !parsed.role || !parsed.accessToken) {
       return null;
     }
     return parsed;

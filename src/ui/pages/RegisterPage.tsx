@@ -1,19 +1,20 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import { getDemoAccounts, loginRequest } from "../../api/auth";
+import { registerRequest } from "../../api/auth";
 import { useI18n } from "../../i18n/useI18n";
 import { useAuthStore } from "../../state/authStore";
 
-export function LoginPage() {
+export function RegisterPage() {
   const { t } = useI18n();
-  const [email, setEmail] = useState("operator@opsboard.dev");
-  const [password, setPassword] = useState("Operator123!");
+  const [userName, setUserName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
-  const loginMutation = useMutation({
-    mutationFn: loginRequest,
+  const registerMutation = useMutation({
+    mutationFn: registerRequest,
     onSuccess: (session) => {
       login(session);
       navigate("/dashboard");
@@ -28,13 +29,24 @@ export function LoginPage() {
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    loginMutation.mutate({ email, password });
+    registerMutation.mutate({ userName, email, password });
   };
 
   return (
     <div className="page center-page">
       <form className="card login-card" onSubmit={onSubmit}>
-        <h1>{t("loginTitle")}</h1>
+        <h1>{t("registerTitle")}</h1>
+        <p className="muted-text">{t("registerSubtitle")}</p>
+
+        <label className="field">
+          <span>{t("loginUserName")}</span>
+          <input
+            className="input"
+            value={userName}
+            onChange={(event) => setUserName(event.target.value)}
+            required
+          />
+        </label>
         <label className="field">
           <span>{t("loginEmail")}</span>
           <input
@@ -55,31 +67,20 @@ export function LoginPage() {
             required
           />
         </label>
-        {loginMutation.isError && (
-          <p className="error-text">{(loginMutation.error as Error).message}</p>
+        {registerMutation.isError && (
+          <p className="error-text">{(registerMutation.error as Error).message}</p>
         )}
-        <button className="btn" type="submit" disabled={loginMutation.isPending}>
-          {loginMutation.isPending ? t("loginSigningIn") : t("loginSignIn")}
+        <button className="btn" type="submit" disabled={registerMutation.isPending}>
+          {registerMutation.isPending ? t("registeringButton") : t("registerButton")}
         </button>
         <p className="muted-text">
-          {t("loginNoAccount")}{" "}
-          <Link className="table-action-link" to="/register">
-            {t("loginGoToRegister")}
+          {t("registerHaveAccount")}{" "}
+          <Link className="table-action-link" to="/login">
+            {t("registerGoToLogin")}
           </Link>
         </p>
-        <details className="section-gap">
-          <summary>{t("loginDemoAccounts")}</summary>
-          <ul className="stack-list">
-            {getDemoAccounts().map((account) => (
-              <li key={account.email} className="stack-item">
-                <p>
-                  <strong>{account.role}</strong>: {account.email} / {account.password}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </details>
       </form>
     </div>
   );
 }
+

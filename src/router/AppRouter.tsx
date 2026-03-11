@@ -11,6 +11,7 @@ import { IncidentEditPage } from "../ui/pages/IncidentEditPage";
 import { IncidentsPage } from "../ui/pages/IncidentsPage";
 import { LoginPage } from "../ui/pages/LoginPage";
 import { NotFoundPage } from "../ui/pages/NotFoundPage";
+import { RegisterPage } from "../ui/pages/RegisterPage";
 import { useAuthStore } from "../state/authStore";
 
 function ProtectedRoute({
@@ -38,6 +39,7 @@ export function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route path="/access-denied" element={<AccessDeniedPage />} />
       <Route
         path="/"
