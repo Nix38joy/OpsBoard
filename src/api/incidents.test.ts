@@ -1,5 +1,8 @@
 import {
   addIncidentComment,
+  createIncident,
+  deleteIncident,
+  getIncidentDetails,
   getStatusTransitions,
   undoIncidentStatusChange,
   updateIncident,
@@ -92,5 +95,47 @@ describe("incidents business rules", () => {
         actorName: "Viewer",
       }),
     ).rejects.toThrow("Viewer cannot edit incidents.");
+  });
+
+  it("allows admin to delete incident", async () => {
+    const created = await createIncident({
+      title: "Delete me incident",
+      description: "Temporary incident created to verify deletion behavior for admin role.",
+      severity: "low",
+      priority: "p4",
+      team: "Ops UI",
+      assignee: "Daria Melnik",
+      actorName: "Admin",
+    });
+
+    await expect(
+      deleteIncident({
+        incidentId: created.id,
+        role: "admin",
+        actorName: "Admin",
+      }),
+    ).resolves.toBeUndefined();
+
+    await expect(getIncidentDetails(created.id)).rejects.toThrow("Incident not found.");
+  });
+
+  it("rejects incident deletion for non-admin role", async () => {
+    const created = await createIncident({
+      title: "Forbidden delete incident",
+      description: "Temporary incident created to verify non-admin delete restriction.",
+      severity: "medium",
+      priority: "p3",
+      team: "Payments",
+      assignee: "Ilya Petrov",
+      actorName: "Operator",
+    });
+
+    await expect(
+      deleteIncident({
+        incidentId: created.id,
+        role: "operator",
+        actorName: "Operator",
+      }),
+    ).rejects.toThrow("Only admin can delete incidents.");
   });
 });

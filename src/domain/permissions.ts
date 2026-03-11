@@ -18,6 +18,10 @@ export function canDeleteComment(role: AppRole | null): boolean {
   return role === "admin";
 }
 
+export function canDeleteIncident(role: AppRole | null): boolean {
+  return role === "admin";
+}
+
 export function getAllowedStatusTransitions(status: IncidentStatus, role: AppRole): IncidentStatus[] {
   const common: Record<IncidentStatus, IncidentStatus[]> = {
     open: ["in_progress", "resolved"],

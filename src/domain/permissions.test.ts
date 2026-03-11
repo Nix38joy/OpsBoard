@@ -3,6 +3,7 @@ import {
   canAddComment,
   canCreateIncident,
   canDeleteComment,
+  canDeleteIncident,
   canEditIncident,
   getAllowedStatusTransitions,
 } from "./permissions";
@@ -32,6 +33,13 @@ describe("permissions", () => {
     expect(canDeleteComment("operator")).toBe(false);
     expect(canDeleteComment("admin")).toBe(true);
     expect(canDeleteComment(null)).toBe(false);
+  });
+
+  it("allows deleting incidents only for admin", () => {
+    expect(canDeleteIncident("viewer")).toBe(false);
+    expect(canDeleteIncident("operator")).toBe(false);
+    expect(canDeleteIncident("admin")).toBe(true);
+    expect(canDeleteIncident(null)).toBe(false);
   });
 
   it("returns correct transitions for standard roles and statuses", () => {

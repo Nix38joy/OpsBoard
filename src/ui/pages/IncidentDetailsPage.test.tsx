@@ -17,6 +17,7 @@ vi.mock("../../api/incidents", async () => {
     undoIncidentStatusChange: vi.fn(),
     addIncidentComment: vi.fn(),
     deleteIncidentComment: vi.fn(),
+    deleteIncident: vi.fn(),
   };
 });
 
@@ -124,12 +125,21 @@ describe("IncidentDetailsPage integration", () => {
       }
       detailsState.comments = detailsState.comments.filter((comment) => comment.id !== commentId);
     });
+    vi.mocked(incidentsApi.deleteIncident).mockImplementation(async ({ role, incidentId }) => {
+      if (role !== "admin") {
+        throw new Error("Only admin can delete incidents.");
+      }
+      if (incidentId !== detailsState.incident.id) {
+        throw new Error("Incident not found.");
+      }
+    });
   });
 
   function renderDetails() {
     return renderWithProviders(
       <Routes>
         <Route path="/incidents/:incidentId" element={<IncidentDetailsPage />} />
+        <Route path="/incidents" element={<p>Incidents list page</p>} />
       </Routes>,
       "/incidents/INC-9001",
     );
@@ -221,5 +231,27 @@ describe("IncidentDetailsPage integration", () => {
     await waitFor(() => {
       expect(incidentsApi.undoIncidentStatusChange).toHaveBeenCalled();
     });
+  });
+
+  it("allows admin to delete incident after confirmation", async () => {
+    useAuthStore.setState({
+      isAuthenticated: true,
+      role: "admin",
+      userName: "Admin User",
+    });
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    const user = userEvent.setup();
+    renderDetails();
+
+    expect(await screen.findByText("Test incident")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Delete incident" }));
+
+    await waitFor(() => {
+      expect(confirmSpy).toHaveBeenCalled();
+      expect(incidentsApi.deleteIncident).toHaveBeenCalled();
+    });
+
+    confirmSpy.mockRestore();
   });
 });

@@ -15,6 +15,7 @@ import {
 import {
   canAddComment,
   canDeleteComment,
+  canDeleteIncident,
   canEditIncident,
   getAllowedStatusTransitions,
 } from "../domain/permissions";
@@ -646,6 +647,29 @@ export async function deleteIncidentComment(params: {
 
   commentsDb.set(params.incidentId, nextComments);
   appendEvent(params.incidentId, `${params.actorName} deleted a comment.`);
+}
+
+export async function deleteIncident(params: {
+  incidentId: string;
+  role: AppRole;
+  actorName: string;
+}): Promise<void> {
+  await delay(300);
+
+  if (!canDeleteIncident(params.role)) {
+    throw new Error("Only admin can delete incidents.");
+  }
+
+  const incidentIndex = incidentsDb.findIndex((item) => item.id === params.incidentId);
+  if (incidentIndex === -1) {
+    throw new Error("Incident not found.");
+  }
+
+  incidentsDb.splice(incidentIndex, 1);
+  commentsDb.delete(params.incidentId);
+  eventsDb.delete(params.incidentId);
+  lastStatusChangeDb.delete(params.incidentId);
+  saveToStorage();
 }
 
 export async function createIncident(params: {

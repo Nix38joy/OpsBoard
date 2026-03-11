@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   addIncidentComment,
+  deleteIncident,
   deleteIncidentComment,
   getIncidentDetails,
   getStatusTransitions,
@@ -11,12 +12,18 @@ import {
 } from "../../api/incidents";
 import { IncidentStatus } from "../../domain/incidents";
 import { LIVE_REFRESH_INTERVAL_MS } from "../../domain/liveUpdates";
-import { canAddComment, canDeleteComment, canEditIncident } from "../../domain/permissions";
+import {
+  canAddComment,
+  canDeleteComment,
+  canDeleteIncident,
+  canEditIncident,
+} from "../../domain/permissions";
 import { useAuthStore } from "../../state/authStore";
 import { useUiSettingsStore } from "../../state/uiSettingsStore";
 
 export function IncidentDetailsPage() {
   const { incidentId } = useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const role = useAuthStore((state) => state.role);
   const userName = useAuthStore((state) => state.userName);
@@ -145,6 +152,24 @@ export function IncidentDetailsPage() {
     },
   });
 
+  const deleteIncidentMutation = useMutation({
+    mutationFn: () =>
+      deleteIncident({
+        incidentId: incidentId ?? "",
+        role: role ?? "viewer",
+        actorName: userName ?? "Unknown user",
+      }),
+    onSuccess: async () => {
+      setActionError(null);
+      await queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      navigate("/incidents");
+    },
+    onError: (error) => {
+      setActionError((error as Error).message);
+    },
+  });
+
   const onCommentSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     commentMutation.mutate(commentDraft);
@@ -153,7 +178,18 @@ export function IncidentDetailsPage() {
     statusMutation.isPending ||
     undoStatusMutation.isPending ||
     commentMutation.isPending ||
-    deleteCommentMutation.isPending;
+    deleteCommentMutation.isPending ||
+    deleteIncidentMutation.isPending;
+
+  const handleDeleteIncident = () => {
+    const confirmed = window.confirm(
+      "Delete this incident permanently? This action cannot be undone.",
+    );
+    if (!confirmed) {
+      return;
+    }
+    deleteIncidentMutation.mutate();
+  };
 
   if (!incidentId) {
     return (
@@ -172,6 +208,16 @@ export function IncidentDetailsPage() {
       <p className="muted-text">
         {autoRefreshEnabled ? "Live updates every 15 seconds." : "Live updates are paused."}
       </p>
+      <div className="actions-row">
+        <button
+          className="btn ghost"
+          type="button"
+          onClick={() => void detailsQuery.refetch()}
+          disabled={detailsQuery.isFetching}
+        >
+          {detailsQuery.isFetching ? "Refreshing..." : "Refresh now"}
+        </button>
+      </div>
 
       {detailsQuery.isLoading && <p>Loading incident details...</p>}
       {detailsQuery.isFetching && !detailsQuery.isLoading && (
@@ -219,6 +265,16 @@ export function IncidentDetailsPage() {
               <Link className="btn ghost section-link" to={`/incidents/${incidentId}/edit`}>
                 Edit incident
               </Link>
+            )}
+            {canDeleteIncident(role) && (
+              <button
+                className="btn danger section-link"
+                type="button"
+                disabled={isAnyActionPending}
+                onClick={handleDeleteIncident}
+              >
+                {deleteIncidentMutation.isPending ? "Deleting..." : "Delete incident"}
+              </button>
             )}
           </section>
 
