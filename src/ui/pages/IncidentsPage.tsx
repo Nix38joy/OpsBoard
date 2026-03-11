@@ -208,52 +208,56 @@ export function IncidentsPage() {
             {incidentsQuery.data.items.length === 0 ? (
               <p>{t("incidentsEmpty")}</p>
             ) : (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{t("incidentsTableId")}</th>
-                    <th>{t("incidentsTableTitle")}</th>
-                    <th>{t("incidentsSeverity")}</th>
-                    <th>{t("incidentsTablePriority")}</th>
-                    <th>{t("incidentsStatus")}</th>
-                    <th>{t("incidentsTableTeam")}</th>
-                    <th>{t("incidentsTableAssignee")}</th>
-                    <th>{t("incidentsTableUpdated")}</th>
-                    <th>{t("incidentsTableActions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {incidentsQuery.data.items.map((item) => (
-                    <tr key={item.id}>
-                      <td>
-                        <Link to={`/incidents/${item.id}`}>{item.id}</Link>
-                      </td>
-                      <td>{item.title}</td>
-                      <td>
-                        <span className={`pill pill-severity-${item.severity}`}>
-                          {severityLabelByValue[item.severity]}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="pill pill-priority">{item.priority.toUpperCase()}</span>
-                      </td>
-                      <td>
-                        <span className={`pill pill-status-${item.status}`}>
-                          {statusLabelByValue[item.status]}
-                        </span>
-                      </td>
-                      <td>{item.team}</td>
-                      <td>{item.assignee}</td>
-                      <td>{new Date(item.updatedAt).toLocaleString()}</td>
-                      <td>
-                        <Link className="table-action-link" to={`/incidents/${item.id}`}>
-                          {t("incidentsOpen")}
-                        </Link>
-                      </td>
+              <div className="table-wrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t("incidentsTableId")}</th>
+                      <th>{t("incidentsTableTitle")}</th>
+                      <th>{t("incidentsSeverity")}</th>
+                      <th>{t("incidentsTablePriority")}</th>
+                      <th>{t("incidentsStatus")}</th>
+                      <th>{t("incidentsTableTeam")}</th>
+                      <th>{t("incidentsTableAssignee")}</th>
+                      <th>{t("incidentsTableUpdated")}</th>
+                      <th>{t("incidentsTableActions")}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {incidentsQuery.data.items.map((item) => {
+                      return (
+                        <tr key={item.id}>
+                          <td>
+                            <Link to={`/incidents/${item.id}`}>{item.id}</Link>
+                          </td>
+                          <td>{item.title}</td>
+                          <td>
+                            <span className={`pill pill-severity-${item.severity}`}>
+                              {severityLabelByValue[item.severity]}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="pill pill-priority">{item.priority.toUpperCase()}</span>
+                          </td>
+                          <td>
+                            <span className={`pill pill-status-${item.status}`}>
+                              {statusLabelByValue[item.status]}
+                            </span>
+                          </td>
+                          <td>{item.team}</td>
+                          <td>{item.assignee}</td>
+                          <td>{new Date(item.updatedAt).toLocaleString()}</td>
+                          <td>
+                            <Link className="table-action-link" to={`/incidents/${item.id}`}>
+                              {t("incidentsOpen")}
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
 
             <div className="table-footer">
