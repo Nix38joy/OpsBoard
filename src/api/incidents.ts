@@ -104,6 +104,7 @@ const INITIAL_INCIDENTS: Incident[] = [
 ];
 
 const STORAGE_KEY = "opsboard.incidents.storage.v1";
+const STORAGE_VERSION = 1;
 
 type PersistedIncidentsData = {
   incidents: Incident[];
@@ -114,6 +115,11 @@ type PersistedIncidentsData = {
     commentCounter: number;
     eventCounter: number;
   };
+};
+
+type PersistedIncidentsEnvelope = {
+  version: number;
+  data: PersistedIncidentsData;
 };
 
 let incidentsDb: Incident[] = [];
@@ -177,6 +183,73 @@ function createDefaultData(): PersistedIncidentsData {
   };
 }
 
+function isPersistedIncidentsData(value: unknown): value is PersistedIncidentsData {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<PersistedIncidentsData>;
+  return (
+    Array.isArray(candidate.incidents) &&
+    typeof candidate.commentsByIncidentId === "object" &&
+    candidate.commentsByIncidentId !== null &&
+    typeof candidate.eventsByIncidentId === "object" &&
+    candidate.eventsByIncidentId !== null
+  );
+}
+
+function normalizePersistedData(
+  data: PersistedIncidentsData,
+  fallback: PersistedIncidentsData,
+): PersistedIncidentsData {
+  const incidents = data.incidents;
+  const commentsByIncidentId: Record<string, IncidentComment[]> = {};
+  const eventsByIncidentId: Record<string, IncidentEvent[]> = {};
+
+  for (const incident of incidents) {
+    commentsByIncidentId[incident.id] = data.commentsByIncidentId[incident.id] ?? [];
+    eventsByIncidentId[incident.id] =
+      data.eventsByIncidentId[incident.id] ??
+      [
+        {
+          id: `EV-FALLBACK-${incident.id}`,
+          incidentId: incident.id,
+          message: `Incident created with status "${incident.status}".`,
+          createdAt: incident.updatedAt,
+        },
+      ];
+  }
+
+  return {
+    incidents,
+    commentsByIncidentId,
+    eventsByIncidentId,
+    counters: {
+      incidentCounter: data.counters?.incidentCounter ?? fallback.counters.incidentCounter,
+      commentCounter: data.counters?.commentCounter ?? fallback.counters.commentCounter,
+      eventCounter: data.counters?.eventCounter ?? fallback.counters.eventCounter,
+    },
+  };
+}
+
+function readPersistedData(raw: string, fallback: PersistedIncidentsData): PersistedIncidentsData {
+  const parsed = JSON.parse(raw) as unknown;
+
+  // Backward compatibility: initial storage format was plain PersistedIncidentsData.
+  if (isPersistedIncidentsData(parsed)) {
+    return normalizePersistedData(parsed, fallback);
+  }
+
+  if (parsed && typeof parsed === "object") {
+    const envelope = parsed as Partial<PersistedIncidentsEnvelope>;
+    if (envelope.version === STORAGE_VERSION && isPersistedIncidentsData(envelope.data)) {
+      return normalizePersistedData(envelope.data, fallback);
+    }
+  }
+
+  throw new Error("Unsupported incidents storage format.");
+}
+
 function saveToStorage() {
   if (!isStorageAvailable()) {
     return;
@@ -192,14 +265,17 @@ function saveToStorage() {
     eventsByIncidentId[incidentId] = events;
   }
 
-  const payload: PersistedIncidentsData = {
-    incidents: incidentsDb,
-    commentsByIncidentId,
-    eventsByIncidentId,
-    counters: {
-      incidentCounter,
-      commentCounter,
-      eventCounter,
+  const payload: PersistedIncidentsEnvelope = {
+    version: STORAGE_VERSION,
+    data: {
+      incidents: incidentsDb,
+      commentsByIncidentId,
+      eventsByIncidentId,
+      counters: {
+        incidentCounter,
+        commentCounter,
+        eventCounter,
+      },
     },
   };
 
@@ -232,13 +308,13 @@ function initializeData() {
   }
 
   try {
-    const parsed = JSON.parse(raw) as PersistedIncidentsData;
-    incidentsDb = parsed.incidents ?? fallback.incidents;
-    commentsDb = new Map(Object.entries(parsed.commentsByIncidentId ?? {}));
-    eventsDb = new Map(Object.entries(parsed.eventsByIncidentId ?? {}));
-    incidentCounter = parsed.counters?.incidentCounter ?? fallback.counters.incidentCounter;
-    commentCounter = parsed.counters?.commentCounter ?? fallback.counters.commentCounter;
-    eventCounter = parsed.counters?.eventCounter ?? fallback.counters.eventCounter;
+    const parsed = readPersistedData(raw, fallback);
+    incidentsDb = parsed.incidents;
+    commentsDb = new Map(Object.entries(parsed.commentsByIncidentId));
+    eventsDb = new Map(Object.entries(parsed.eventsByIncidentId));
+    incidentCounter = parsed.counters.incidentCounter;
+    commentCounter = parsed.counters.commentCounter;
+    eventCounter = parsed.counters.eventCounter;
   } catch {
     incidentsDb = fallback.incidents;
     commentsDb = new Map(Object.entries(fallback.commentsByIncidentId));
