@@ -9,6 +9,7 @@ import {
   updateIncidentStatus,
 } from "../../api/incidents";
 import { IncidentStatus } from "../../domain/incidents";
+import { canAddComment, canDeleteComment, canEditIncident } from "../../domain/permissions";
 import { useAuthStore } from "../../state/authStore";
 
 export function IncidentDetailsPage() {
@@ -147,7 +148,7 @@ export function IncidentDetailsPage() {
           <section className="card section-gap">
             <h2>Description</h2>
             <p>{detailsQuery.data.incident.description}</p>
-            {(role === "operator" || role === "admin") && (
+            {canEditIncident(role) && (
               <Link className="btn ghost section-link" to={`/incidents/${incidentId}/edit`}>
                 Edit incident
               </Link>
@@ -181,17 +182,17 @@ export function IncidentDetailsPage() {
                 value={commentDraft}
                 onChange={(event) => setCommentDraft(event.target.value)}
                 placeholder="Write a comment (for operator/admin)"
-                disabled={role === "viewer" || isAnyActionPending}
+                disabled={!canAddComment(role) || isAnyActionPending}
               />
               <button
                 className="btn"
                 type="submit"
-                disabled={role === "viewer" || isAnyActionPending}
+                disabled={!canAddComment(role) || isAnyActionPending}
               >
                 {commentMutation.isPending ? "Sending..." : "Add comment"}
               </button>
             </form>
-            {role === "viewer" && <p className="muted-text">Viewer role can only read comments.</p>}
+            {!canAddComment(role) && <p className="muted-text">Viewer role can only read comments.</p>}
             {detailsQuery.data.comments.length === 0 ? (
               <p>No comments yet.</p>
             ) : (
@@ -203,7 +204,7 @@ export function IncidentDetailsPage() {
                       {new Date(comment.createdAt).toLocaleString()}
                     </p>
                     <p>{comment.message}</p>
-                    {role === "admin" && (
+                    {canDeleteComment(role) && (
                       <button
                         className="btn danger"
                         type="button"

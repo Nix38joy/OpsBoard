@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ReactNode } from "react";
 import { AppRole } from "../domain/incidents";
+import { INCIDENT_EDITOR_ROLES } from "../domain/permissions";
 import { AppLayout } from "../ui/layout/AppLayout";
 import { AccessDeniedPage } from "../ui/pages/AccessDeniedPage";
 import { DashboardPage } from "../ui/pages/DashboardPage";
@@ -53,7 +54,7 @@ export function AppRouter() {
         <Route
           path="incidents/:incidentId/edit"
           element={
-            <ProtectedRoute allowedRoles={["operator", "admin"]}>
+            <ProtectedRoute allowedRoles={INCIDENT_EDITOR_ROLES}>
               <IncidentEditPage />
             </ProtectedRoute>
           }
@@ -61,7 +62,7 @@ export function AppRouter() {
         <Route
           path="incidents/new"
           element={
-            <ProtectedRoute allowedRoles={["operator", "admin"]}>
+            <ProtectedRoute allowedRoles={INCIDENT_EDITOR_ROLES}>
               <IncidentCreatePage />
             </ProtectedRoute>
           }

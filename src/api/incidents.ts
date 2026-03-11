@@ -11,6 +11,12 @@ import {
   IncidentSeverity,
   IncidentStatus,
 } from "../domain/incidents";
+import {
+  canAddComment,
+  canDeleteComment,
+  canEditIncident,
+  getAllowedStatusTransitions,
+} from "../domain/permissions";
 
 const INITIAL_INCIDENTS: Incident[] = [
   {
@@ -339,21 +345,6 @@ function getIncidentOrThrow(incidentId: string): Incident {
   return found;
 }
 
-function getAllowedStatusTransitions(status: IncidentStatus, role: AppRole): IncidentStatus[] {
-  const common: Record<IncidentStatus, IncidentStatus[]> = {
-    open: ["in_progress", "resolved"],
-    in_progress: ["resolved"],
-    resolved: ["closed", "in_progress"],
-    closed: [],
-  };
-
-  if (status === "closed" && role === "admin") {
-    return ["in_progress"];
-  }
-
-  return common[status];
-}
-
 function appendEvent(incidentId: string, message: string) {
   const events = eventsDb.get(incidentId) ?? [];
   events.unshift({
@@ -517,7 +508,7 @@ export async function addIncidentComment(params: {
   await delay(250);
   getIncidentOrThrow(params.incidentId);
 
-  if (params.role === "viewer") {
+  if (!canAddComment(params.role)) {
     throw new Error("Viewer cannot add comments.");
   }
 
@@ -555,7 +546,7 @@ export async function deleteIncidentComment(params: {
   await delay(250);
   getIncidentOrThrow(params.incidentId);
 
-  if (params.role !== "admin") {
+  if (!canDeleteComment(params.role)) {
     throw new Error("Only admin can delete comments.");
   }
 
@@ -621,7 +612,7 @@ export async function updateIncident(params: {
 }): Promise<Incident> {
   await delay(350);
 
-  if (params.role === "viewer") {
+  if (!canEditIncident(params.role)) {
     throw new Error("Viewer cannot edit incidents.");
   }
 

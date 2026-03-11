@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { canCreateIncident } from "../../domain/permissions";
 import { useAuthStore } from "../../state/authStore";
 
 export function AppLayout() {
@@ -35,7 +36,7 @@ export function AppLayout() {
           <NavLink className="nav-item" to="/incidents">
             Incidents
           </NavLink>
-          {(role === "operator" || role === "admin") && (
+          {canCreateIncident(role) && (
             <NavLink className="nav-item" to="/incidents/new">
               Create Incident
             </NavLink>
