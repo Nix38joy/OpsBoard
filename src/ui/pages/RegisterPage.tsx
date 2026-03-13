@@ -49,6 +49,18 @@ export function RegisterPage() {
   }, [isAuthenticated, navigate]);
 
   const strength = getPasswordStrength(password);
+  const passwordChecks = {
+    minLength: password.length >= 8,
+    mixedCase: /[A-Z]/.test(password) && /[a-z]/.test(password),
+    numberOrSymbol: /\d/.test(password) || /[^A-Za-z0-9]/.test(password),
+  };
+  const isEmailLikelyValid = email.includes("@") && email.includes(".");
+  const isPasswordValid =
+    passwordChecks.minLength && passwordChecks.mixedCase && passwordChecks.numberOrSymbol;
+  const isConfirmMatched = confirmPassword.length > 0 && password === confirmPassword;
+  const hasPasswordMismatch = confirmPassword.length > 0 && password !== confirmPassword;
+  const isReadyToSubmit =
+    userName.trim().length >= 3 && isEmailLikelyValid && isPasswordValid && isConfirmMatched;
   const strengthTextByScore = {
     0: "",
     1: t("registerStrengthWeak"),
@@ -64,6 +76,12 @@ export function RegisterPage() {
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!isReadyToSubmit) {
+      if (hasPasswordMismatch) {
+        setMismatchError(t("registerPasswordMismatch"));
+      }
+      return;
+    }
     if (password !== confirmPassword) {
       setMismatchError(t("registerPasswordMismatch"));
       return;
@@ -164,12 +182,26 @@ export function RegisterPage() {
             {t("registerPasswordStrength")}: <strong>{strengthTextByScore[strength]}</strong>
           </p>
           <div className={strengthClassByScore[strength]} />
+          <p className="muted-text auth-requirements-title">{t("registerPasswordRequirements")}:</p>
+          <ul className="auth-requirements-list">
+            <li className={passwordChecks.minLength ? "met" : "unmet"}>
+              {t("registerPasswordRuleLength")}
+            </li>
+            <li className={passwordChecks.mixedCase ? "met" : "unmet"}>
+              {t("registerPasswordRuleCase")}
+            </li>
+            <li className={passwordChecks.numberOrSymbol ? "met" : "unmet"}>
+              {t("registerPasswordRuleNumberOrSymbol")}
+            </li>
+          </ul>
         </div>
-        {mismatchError && <p className="error-text">{mismatchError}</p>}
+        {(mismatchError || hasPasswordMismatch) && (
+          <p className="error-text">{mismatchError ?? t("registerPasswordMismatch")}</p>
+        )}
         {registerMutation.isError && (
           <p className="error-text">{(registerMutation.error as Error).message}</p>
         )}
-        <button className="btn" type="submit" disabled={registerMutation.isPending}>
+        <button className="btn" type="submit" disabled={registerMutation.isPending || !isReadyToSubmit}>
           {registerMutation.isPending ? t("registeringButton") : t("registerButton")}
         </button>
         <p className="muted-text">

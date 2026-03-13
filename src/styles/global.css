@@ -371,6 +371,27 @@ a {
   font-size: 13px;
 }
 
+.auth-requirements-title {
+  margin-top: 8px;
+}
+
+.auth-requirements-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.auth-requirements-list li.met {
+  color: #166534;
+}
+
+.auth-requirements-list li.unmet {
+  color: #64748b;
+}
+
 .auth-strength-meter {
   width: 100%;
   height: 6px;

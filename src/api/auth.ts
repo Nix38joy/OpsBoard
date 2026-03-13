@@ -123,6 +123,12 @@ function validatePassword(password: string) {
   if (password.length < 8) {
     throw new Error("Password must contain at least 8 characters.");
   }
+  if (!/[A-Z]/.test(password) || !/[a-z]/.test(password)) {
+    throw new Error("Password must include uppercase and lowercase letters.");
+  }
+  if (!/\d/.test(password) && !/[^A-Za-z0-9]/.test(password)) {
+    throw new Error("Password must include at least one number or special character.");
+  }
 }
 
 export async function registerRequest(payload: RegisterPayload): Promise<AuthSession> {
