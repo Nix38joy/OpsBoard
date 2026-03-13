@@ -5,6 +5,7 @@ import { INCIDENT_EDITOR_ROLES } from "../domain/permissions";
 import { AppLayout } from "../ui/layout/AppLayout";
 import { AccessDeniedPage } from "../ui/pages/AccessDeniedPage";
 import { DashboardPage } from "../ui/pages/DashboardPage";
+import { ForgotPasswordPage } from "../ui/pages/ForgotPasswordPage";
 import { IncidentCreatePage } from "../ui/pages/IncidentCreatePage";
 import { IncidentDetailsPage } from "../ui/pages/IncidentDetailsPage";
 import { IncidentEditPage } from "../ui/pages/IncidentEditPage";
@@ -39,6 +40,7 @@ export function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/access-denied" element={<AccessDeniedPage />} />
       <Route

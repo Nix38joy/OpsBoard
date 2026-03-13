@@ -186,3 +186,16 @@ export function getDemoAccounts() {
     role: account.role,
   }));
 }
+
+export async function requestPasswordReset(emailInput: string): Promise<{ message: string }> {
+  await new Promise((resolve) => setTimeout(resolve, 700));
+  ensureSeedUsers();
+
+  const email = normalizeEmail(emailInput);
+  validateEmail(email);
+
+  // In real auth flows, keep response generic to avoid account enumeration.
+  return {
+    message: "If an account exists, password reset instructions have been sent.",
+  };
+}

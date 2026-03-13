@@ -81,6 +81,11 @@ export function LoginPage() {
           {loginMutation.isPending ? t("loginSigningIn") : t("loginSignIn")}
         </button>
         <p className="muted-text">
+          <Link className="table-action-link" to="/forgot-password">
+            {t("loginForgotPassword")}
+          </Link>
+        </p>
+        <p className="muted-text">
           {t("loginNoAccount")}{" "}
           <Link className="table-action-link" to="/register">
             {t("loginGoToRegister")}
