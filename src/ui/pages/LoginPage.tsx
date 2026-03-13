@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { getDemoAccounts, loginRequest } from "../../api/auth";
@@ -10,6 +10,7 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isCapsLockOn, setIsCapsLockOn] = useState(false);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
@@ -30,6 +31,10 @@ export function LoginPage() {
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     loginMutation.mutate({ email, password });
+  };
+
+  const handlePasswordKeyEvent = (event: KeyboardEvent<HTMLInputElement>) => {
+    setIsCapsLockOn(event.getModifierState("CapsLock"));
   };
 
   return (
@@ -54,6 +59,9 @@ export function LoginPage() {
               type={isPasswordVisible ? "text" : "password"}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              onKeyUp={handlePasswordKeyEvent}
+              onKeyDown={handlePasswordKeyEvent}
+              onBlur={() => setIsCapsLockOn(false)}
               required
             />
             <button
@@ -73,6 +81,7 @@ export function LoginPage() {
               )}
             </button>
           </div>
+          {isCapsLockOn && <p className="warning-text">{t("loginCapsLockOn")}</p>}
         </label>
         {loginMutation.isError && (
           <p className="error-text">{(loginMutation.error as Error).message}</p>

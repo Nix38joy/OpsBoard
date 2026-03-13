@@ -543,6 +543,12 @@ a {
   color: #b91c1c;
 }
 
+.warning-text {
+  margin: 6px 0 0;
+  color: #b45309;
+  font-size: 12px;
+}
+
 @media (max-width: 900px) {
   .topbar {
     align-items: flex-start;

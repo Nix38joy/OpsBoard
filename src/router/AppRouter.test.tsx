@@ -19,6 +19,12 @@ describe("AppRouter access control", () => {
     expect(await screen.findByText("OpsBoard Login")).toBeInTheDocument();
   });
 
+  it("allows unauthenticated user to open forgot password page", async () => {
+    renderWithProviders(<AppRouter />, "/forgot-password");
+
+    expect(await screen.findByRole("heading", { name: "Reset password" })).toBeInTheDocument();
+  });
+
   it("denies viewer access to create page", async () => {
     useAuthStore.setState({
       isAuthenticated: true,

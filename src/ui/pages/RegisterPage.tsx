@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { registerRequest } from "../../api/auth";
@@ -30,6 +30,7 @@ export function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isCapsLockOn, setIsCapsLockOn] = useState(false);
   const [mismatchError, setMismatchError] = useState<string | null>(null);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const login = useAuthStore((state) => state.login);
@@ -90,6 +91,10 @@ export function RegisterPage() {
     registerMutation.mutate({ userName, email, password });
   };
 
+  const handlePasswordKeyEvent = (event: KeyboardEvent<HTMLInputElement>) => {
+    setIsCapsLockOn(event.getModifierState("CapsLock"));
+  };
+
   return (
     <div className="page center-page">
       <form className="card login-card" onSubmit={onSubmit}>
@@ -126,6 +131,9 @@ export function RegisterPage() {
                 setPassword(event.target.value);
                 setMismatchError(null);
               }}
+              onKeyUp={handlePasswordKeyEvent}
+              onKeyDown={handlePasswordKeyEvent}
+              onBlur={() => setIsCapsLockOn(false)}
               required
             />
             <button
@@ -145,6 +153,7 @@ export function RegisterPage() {
               )}
             </button>
           </div>
+          {isCapsLockOn && <p className="warning-text">{t("loginCapsLockOn")}</p>}
         </label>
         <label className="field">
           <span>{t("registerConfirmPassword")}</span>
@@ -157,6 +166,9 @@ export function RegisterPage() {
                 setConfirmPassword(event.target.value);
                 setMismatchError(null);
               }}
+              onKeyUp={handlePasswordKeyEvent}
+              onKeyDown={handlePasswordKeyEvent}
+              onBlur={() => setIsCapsLockOn(false)}
               required
             />
             <button
@@ -176,6 +188,7 @@ export function RegisterPage() {
               )}
             </button>
           </div>
+          {isCapsLockOn && <p className="warning-text">{t("loginCapsLockOn")}</p>}
         </label>
         <div className="auth-strength">
           <p className="muted-text">
