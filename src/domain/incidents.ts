@@ -49,6 +49,7 @@ export type IncidentsFilters = {
   search: string;
   status: "all" | IncidentStatus;
   severity: "all" | IncidentSeverity;
+  sla: "all" | "at_risk" | "breached";
   overdueOnly: boolean;
   page: number;
   pageSize: number;

@@ -283,6 +283,10 @@ export function IncidentDetailsPage() {
                   <span className="muted-text">{t("slaNotTracked")}</span>
                 ) : incidentSla.isBreached ? (
                   <span className="pill pill-sla-breached">{t("slaBreached")}</span>
+                ) : incidentSla.isAtRisk ? (
+                  <span className="pill pill-sla-risk">
+                    {t("slaAtRisk")}: {t("slaIn", { time: formatSlaRemaining(incidentSla.remainingMs ?? 0) })}
+                  </span>
                 ) : (
                   <span className="pill pill-sla-ok">
                     {t("slaIn", { time: formatSlaRemaining(incidentSla.remainingMs ?? 0) })}

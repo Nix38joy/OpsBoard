@@ -502,6 +502,12 @@ a {
   border-color: #fecaca;
 }
 
+.pill-sla-risk {
+  background: #fffbeb;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
 .btn {
   height: 38px;
   display: inline-flex;

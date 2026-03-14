@@ -3,6 +3,7 @@ import { Incident, IncidentPriority, IncidentStatus } from "./incidents";
 type IncidentSla = {
   isTracked: boolean;
   isBreached: boolean;
+  isAtRisk: boolean;
   remainingMs: number | null;
 };
 
@@ -22,6 +23,7 @@ export function getIncidentSla(incident: Incident, nowMs = Date.now()): Incident
     return {
       isTracked: false,
       isBreached: false,
+      isAtRisk: false,
       remainingMs: null,
     };
   }
@@ -30,10 +32,13 @@ export function getIncidentSla(incident: Incident, nowMs = Date.now()): Incident
   const elapsedMs = Math.max(0, nowMs - updatedAtMs);
   const thresholdMs = SLA_THRESHOLD_BY_PRIORITY_MS[incident.priority];
   const remainingMs = thresholdMs - elapsedMs;
+  const isBreached = remainingMs <= 0;
+  const isAtRisk = !isBreached && remainingMs <= thresholdMs * 0.25;
 
   return {
     isTracked: true,
-    isBreached: remainingMs <= 0,
+    isBreached,
+    isAtRisk,
     remainingMs,
   };
 }

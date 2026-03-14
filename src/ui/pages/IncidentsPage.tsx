@@ -18,6 +18,7 @@ export function IncidentsPage() {
     setSearch,
     setSeverity,
     setStatus,
+    setSla,
     setOverdueOnly,
     setPage,
     resetFilters,
@@ -28,6 +29,7 @@ export function IncidentsPage() {
     const pageFromUrl = Number(searchParams.get("page") ?? "1");
     const statusFromUrl = searchParams.get("status");
     const severityFromUrl = searchParams.get("severity");
+    const slaFromUrl = searchParams.get("sla");
     const searchFromUrl = searchParams.get("search");
     const overdueFromUrl = searchParams.get("overdue");
 
@@ -56,6 +58,14 @@ export function IncidentsPage() {
       nextState.severity = severityFromUrl;
     }
 
+    if (
+      slaFromUrl === "all" ||
+      slaFromUrl === "at_risk" ||
+      slaFromUrl === "breached"
+    ) {
+      nextState.sla = slaFromUrl;
+    }
+
     if (searchFromUrl !== null) {
       nextState.search = searchFromUrl;
     }
@@ -74,6 +84,9 @@ export function IncidentsPage() {
     }
     if (filters.severity !== "all") {
       params.set("severity", filters.severity);
+    }
+    if (filters.sla !== "all") {
+      params.set("sla", filters.sla);
     }
     if (filters.overdueOnly) {
       params.set("overdue", "1");
@@ -182,6 +195,18 @@ export function IncidentsPage() {
             </select>
           </label>
           <label className="field">
+            <span>{t("incidentsSlaFilter")}</span>
+            <select
+              className="input"
+              value={filters.sla}
+              onChange={(event) => setSla(event.target.value as IncidentsFilters["sla"])}
+            >
+              <option value="all">{t("slaFilterAll")}</option>
+              <option value="at_risk">{t("slaFilterAtRisk")}</option>
+              <option value="breached">{t("slaFilterBreached")}</option>
+            </select>
+          </label>
+          <label className="field">
             <span>{t("incidentsFlags")}</span>
             <label className="checkbox-row">
               <input
@@ -255,6 +280,10 @@ export function IncidentsPage() {
                               <span className="muted-text">{t("slaNotTracked")}</span>
                             ) : sla.isBreached ? (
                               <span className="pill pill-sla-breached">{t("slaBreached")}</span>
+                            ) : sla.isAtRisk ? (
+                              <span className="pill pill-sla-risk">
+                                {t("slaAtRisk")}: {t("slaIn", { time: formatSlaRemaining(sla.remainingMs ?? 0) })}
+                              </span>
                             ) : (
                               <span className="pill pill-sla-ok">
                                 {t("slaIn", { time: formatSlaRemaining(sla.remainingMs ?? 0) })}

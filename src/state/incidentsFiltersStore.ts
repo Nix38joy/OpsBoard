@@ -5,6 +5,7 @@ const DEFAULT_FILTERS: IncidentsFilters = {
   search: "",
   status: "all",
   severity: "all",
+  sla: "all",
   overdueOnly: false,
   page: 1,
   pageSize: 5,
@@ -15,6 +16,7 @@ type IncidentsFiltersState = {
   setSearch: (search: string) => void;
   setStatus: (status: IncidentsFilters["status"]) => void;
   setSeverity: (severity: IncidentsFilters["severity"]) => void;
+  setSla: (sla: IncidentsFilters["sla"]) => void;
   setOverdueOnly: (overdueOnly: boolean) => void;
   setPage: (page: number) => void;
   resetFilters: () => void;
@@ -34,6 +36,10 @@ export const useIncidentsFiltersStore = create<IncidentsFiltersState>((set) => (
   setSeverity: (severity) =>
     set((state) => ({
       filters: { ...state.filters, severity, page: 1 },
+    })),
+  setSla: (sla) =>
+    set((state) => ({
+      filters: { ...state.filters, sla, page: 1 },
     })),
   setOverdueOnly: (overdueOnly) =>
     set((state) => ({

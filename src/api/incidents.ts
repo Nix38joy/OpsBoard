@@ -12,6 +12,7 @@ import {
   IncidentLastStatusChange,
   IncidentStatus,
 } from "../domain/incidents";
+import { getIncidentSla } from "../domain/sla";
 import {
   canAddComment,
   canDeleteComment,
@@ -416,12 +417,17 @@ export async function getIncidents(filters: IncidentsFilters): Promise<Incidents
     const statusMatch = filters.status === "all" || incident.status === filters.status;
     const severityMatch = filters.severity === "all" || incident.severity === filters.severity;
     const overdueMatch = !filters.overdueOnly || isIncidentOverdue(incident);
+    const sla = getIncidentSla(incident);
+    const slaMatch =
+      filters.sla === "all" ||
+      (filters.sla === "breached" && sla.isBreached) ||
+      (filters.sla === "at_risk" && sla.isAtRisk);
     const searchMatch =
       search.length === 0 ||
       incident.id.toLowerCase().includes(search) ||
       incident.title.toLowerCase().includes(search);
 
-    return statusMatch && severityMatch && overdueMatch && searchMatch;
+    return statusMatch && severityMatch && overdueMatch && slaMatch && searchMatch;
   });
 
   const start = (filters.page - 1) * filters.pageSize;
