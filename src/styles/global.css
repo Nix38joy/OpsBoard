@@ -490,6 +490,18 @@ a {
   border-color: #a7f3d0;
 }
 
+.pill-sla-ok {
+  background: #ecfeff;
+  color: #0e7490;
+  border-color: #a5f3fc;
+}
+
+.pill-sla-breached {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
 .btn {
   height: 38px;
   display: inline-flex;

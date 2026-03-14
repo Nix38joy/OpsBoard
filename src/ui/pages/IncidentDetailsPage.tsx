@@ -13,6 +13,7 @@ import {
 import { IncidentStatus } from "../../domain/incidents";
 import { useI18n } from "../../i18n/useI18n";
 import { LIVE_REFRESH_INTERVAL_MS } from "../../domain/liveUpdates";
+import { formatSlaRemaining, getIncidentSla } from "../../domain/sla";
 import {
   canAddComment,
   canDeleteComment,
@@ -64,6 +65,7 @@ export function IncidentDetailsPage() {
     high: t("severityHigh"),
     critical: t("severityCritical"),
   };
+  const incidentSla = detailsQuery.data?.incident ? getIncidentSla(detailsQuery.data.incident) : null;
 
   const undoRemainingMs = useMemo(() => {
     if (!undoDeadlineMs) {
@@ -274,6 +276,18 @@ export function IncidentDetailsPage() {
               <p>
                 <strong>{t("incidentsTableUpdated")}:</strong>{" "}
                 {new Date(detailsQuery.data.incident.updatedAt).toLocaleString()}
+              </p>
+              <p>
+                <strong>{t("detailsSla")}:</strong>{" "}
+                {!incidentSla || !incidentSla.isTracked ? (
+                  <span className="muted-text">{t("slaNotTracked")}</span>
+                ) : incidentSla.isBreached ? (
+                  <span className="pill pill-sla-breached">{t("slaBreached")}</span>
+                ) : (
+                  <span className="pill pill-sla-ok">
+                    {t("slaIn", { time: formatSlaRemaining(incidentSla.remainingMs ?? 0) })}
+                  </span>
+                )}
               </p>
             </div>
           </section>

@@ -5,6 +5,7 @@ import { getIncidents } from "../../api/incidents";
 import { useI18n } from "../../i18n/useI18n";
 import { IncidentsFilters } from "../../domain/incidents";
 import { LIVE_REFRESH_INTERVAL_MS } from "../../domain/liveUpdates";
+import { formatSlaRemaining, getIncidentSla } from "../../domain/sla";
 import { useIncidentsFiltersStore } from "../../state/incidentsFiltersStore";
 import { useUiSettingsStore } from "../../state/uiSettingsStore";
 
@@ -220,11 +221,13 @@ export function IncidentsPage() {
                       <th>{t("incidentsTableTeam")}</th>
                       <th>{t("incidentsTableAssignee")}</th>
                       <th>{t("incidentsTableUpdated")}</th>
+                      <th>{t("incidentsTableSla")}</th>
                       <th>{t("incidentsTableActions")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {incidentsQuery.data.items.map((item) => {
+                      const sla = getIncidentSla(item);
                       return (
                         <tr key={item.id}>
                           <td>
@@ -247,6 +250,17 @@ export function IncidentsPage() {
                           <td>{item.team}</td>
                           <td>{item.assignee}</td>
                           <td>{new Date(item.updatedAt).toLocaleString()}</td>
+                          <td>
+                            {!sla.isTracked ? (
+                              <span className="muted-text">{t("slaNotTracked")}</span>
+                            ) : sla.isBreached ? (
+                              <span className="pill pill-sla-breached">{t("slaBreached")}</span>
+                            ) : (
+                              <span className="pill pill-sla-ok">
+                                {t("slaIn", { time: formatSlaRemaining(sla.remainingMs ?? 0) })}
+                              </span>
+                            )}
+                          </td>
                           <td>
                             <Link className="table-action-link" to={`/incidents/${item.id}`}>
                               {t("incidentsOpen")}
