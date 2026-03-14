@@ -19,12 +19,16 @@ export function DashboardPage() {
     overdue: t("incidentsOverdueOnly"),
     resolved7d: t("dashboardLabelResolved7d"),
     criticalActive: t("dashboardLabelCriticalActive"),
+    slaBreachedActive: t("dashboardLabelSlaBreached"),
+    slaAtRiskActive: t("dashboardLabelSlaAtRisk"),
   };
   const metricDescriptionById: Record<string, string> = {
     open: t("dashboardDescOpen"),
     overdue: t("dashboardDescOverdue"),
     resolved7d: t("dashboardDescResolved7d"),
     criticalActive: t("dashboardDescCriticalActive"),
+    slaBreachedActive: t("dashboardDescSlaBreachedActive"),
+    slaAtRiskActive: t("dashboardDescSlaAtRiskActive"),
   };
 
   return (

@@ -449,6 +449,9 @@ export async function getDashboardMetrics(): Promise<DashboardMetric[]> {
   await delay(250);
 
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const activeIncidents = incidentsDb.filter(
+    (item) => item.status === "open" || item.status === "in_progress",
+  );
   const openCount = incidentsDb.filter((item) => item.status === "open").length;
   const overdueCount = incidentsDb.filter((item) => isIncidentOverdue(item)).length;
   const resolved7dCount = incidentsDb.filter((item) => {
@@ -461,6 +464,8 @@ export async function getDashboardMetrics(): Promise<DashboardMetric[]> {
     (item) =>
       item.severity === "critical" && (item.status === "open" || item.status === "in_progress"),
   ).length;
+  const slaBreachedActiveCount = activeIncidents.filter((item) => getIncidentSla(item).isBreached).length;
+  const slaAtRiskActiveCount = activeIncidents.filter((item) => getIncidentSla(item).isAtRisk).length;
 
   return [
     {
@@ -490,6 +495,20 @@ export async function getDashboardMetrics(): Promise<DashboardMetric[]> {
       value: criticalActiveCount,
       description: "Critical incidents still in progress",
       to: "/incidents?severity=critical",
+    },
+    {
+      id: "slaBreachedActive",
+      label: "SLA breached",
+      value: slaBreachedActiveCount,
+      description: "Active incidents with breached SLA",
+      to: "/incidents?sla=breached",
+    },
+    {
+      id: "slaAtRiskActive",
+      label: "SLA at risk",
+      value: slaAtRiskActiveCount,
+      description: "Active incidents that are close to SLA breach",
+      to: "/incidents?sla=at_risk",
     },
   ];
 }

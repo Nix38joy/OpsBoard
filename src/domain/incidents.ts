@@ -64,7 +64,13 @@ export type IncidentsListResponse = {
 };
 
 export type DashboardMetric = {
-  id: "open" | "overdue" | "resolved7d" | "criticalActive";
+  id:
+    | "open"
+    | "overdue"
+    | "resolved7d"
+    | "criticalActive"
+    | "slaBreachedActive"
+    | "slaAtRiskActive";
   label: string;
   value: number;
   description: string;
