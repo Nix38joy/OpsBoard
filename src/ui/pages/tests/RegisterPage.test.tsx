@@ -1,3 +1,4 @@
+import { describe, beforeEach, it, expect } from "vitest"; // <-- Добавлен импорт инструментов тестирования
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RegisterPage } from "../RegisterPage";
