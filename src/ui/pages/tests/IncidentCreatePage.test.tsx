@@ -1,3 +1,4 @@
+import { vi, describe, beforeEach, it, expect } from "vitest"; // <-- Добавлен импорт инструментов тестирования
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IncidentCreatePage } from "../IncidentCreatePage";
@@ -6,8 +7,9 @@ import { useAuthStore } from "../../../state/authStore";
 
 const createIncidentMock = vi.fn();
 
-vi.mock("../../api/incidents", async () => {
-  const actual = await vi.importActual<typeof import("../../../api/incidents")>("../../api/incidents");
+// Изменено на три точки (../../../), чтобы успешно выйти в корень src/
+vi.mock("../../../api/incidents", async () => {
+  const actual = await vi.importActual<typeof import("../../../api/incidents")>("../../../api/incidents");
   return {
     ...actual,
     getIncidentFormOptions: vi.fn().mockResolvedValue({
