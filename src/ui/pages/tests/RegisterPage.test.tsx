@@ -1,8 +1,8 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { RegisterPage } from "./RegisterPage";
-import { renderWithProviders } from "../../test/renderWithProviders";
-import { useAuthStore } from "../../state/authStore";
+import { RegisterPage } from "../RegisterPage";
+import { renderWithProviders } from "../../../test/renderWithProviders";
+import { useAuthStore } from "../../../state/authStore";
 
 describe("RegisterPage form readiness", () => {
   beforeEach(() => {

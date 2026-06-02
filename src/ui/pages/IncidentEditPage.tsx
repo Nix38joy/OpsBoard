@@ -6,6 +6,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { getIncidentDetails, getIncidentFormOptions, updateIncident } from "../../api/incidents";
 import { useI18n } from "../../i18n/useI18n";
 import { useAuthStore } from "../../state/authStore";
+import { useToastStore } from "../../state/toastStore";
 import { createIncidentFormSchema, IncidentFormValues } from "../forms/incidentFormSchema";
 
 export function IncidentEditPage() {
@@ -15,6 +16,7 @@ export function IncidentEditPage() {
   const queryClient = useQueryClient();
   const role = useAuthStore((state) => state.role) ?? "viewer";
   const userName = useAuthStore((state) => state.userName) ?? "Unknown user";
+  const pushToast = useToastStore((state) => state.pushToast);
   const incidentFormSchema = createIncidentFormSchema(t);
 
   const form = useForm<IncidentFormValues>({
@@ -58,7 +60,11 @@ export function IncidentEditPage() {
       await queryClient.invalidateQueries({ queryKey: ["incident", incidentId] });
       await queryClient.invalidateQueries({ queryKey: ["incidents"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      pushToast({ kind: "success", message: t("toastIncidentUpdated") });
       navigate(`/incidents/${incidentId}`);
+    },
+    onError: (error) => {
+      pushToast({ kind: "error", message: (error as Error).message });
     },
   });
 

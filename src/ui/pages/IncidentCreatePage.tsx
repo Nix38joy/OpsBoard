@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { createIncident, getIncidentFormOptions } from "../../api/incidents";
 import { useI18n } from "../../i18n/useI18n";
 import { useAuthStore } from "../../state/authStore";
+import { useToastStore } from "../../state/toastStore";
 import {
   INCIDENT_FORM_DEFAULT_VALUES,
   IncidentFormValues,
@@ -16,6 +17,7 @@ export function IncidentCreatePage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const userName = useAuthStore((state) => state.userName) ?? "Unknown user";
+  const pushToast = useToastStore((state) => state.pushToast);
   const incidentFormSchema = createIncidentFormSchema(t);
 
   const form = useForm<IncidentFormValues>({
@@ -33,7 +35,11 @@ export function IncidentCreatePage() {
     onSuccess: async (createdIncident) => {
       await queryClient.invalidateQueries({ queryKey: ["incidents"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      pushToast({ kind: "success", message: t("toastIncidentCreated") });
       navigate(`/incidents/${createdIncident.id}`);
+    },
+    onError: (error) => {
+      pushToast({ kind: "error", message: (error as Error).message });
     },
   });
 

@@ -21,6 +21,7 @@ import {
   canEditIncident,
 } from "../../domain/permissions";
 import { useAuthStore } from "../../state/authStore";
+import { useToastStore } from "../../state/toastStore";
 import { useUiSettingsStore } from "../../state/uiSettingsStore";
 
 export function IncidentDetailsPage() {
@@ -30,6 +31,7 @@ export function IncidentDetailsPage() {
   const role = useAuthStore((state) => state.role);
   const userName = useAuthStore((state) => state.userName);
   const autoRefreshEnabled = useUiSettingsStore((state) => state.autoRefreshEnabled);
+  const pushToast = useToastStore((state) => state.pushToast);
   const { t } = useI18n();
   const [commentDraft, setCommentDraft] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
@@ -110,12 +112,14 @@ export function IncidentDetailsPage() {
       }),
     onSuccess: async () => {
       setActionError(null);
+      pushToast({ kind: "success", message: t("toastStatusUpdated") });
       await queryClient.invalidateQueries({ queryKey: ["incident", incidentId] });
       await queryClient.invalidateQueries({ queryKey: ["incidents"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (error) => {
       setActionError((error as Error).message);
+      pushToast({ kind: "error", message: (error as Error).message });
     },
   });
 
@@ -128,12 +132,14 @@ export function IncidentDetailsPage() {
       }),
     onSuccess: async () => {
       setActionError(null);
+      pushToast({ kind: "success", message: t("toastStatusUndo") });
       await queryClient.invalidateQueries({ queryKey: ["incident", incidentId] });
       await queryClient.invalidateQueries({ queryKey: ["incidents"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (error) => {
       setActionError((error as Error).message);
+      pushToast({ kind: "error", message: (error as Error).message });
     },
   });
 
@@ -148,10 +154,12 @@ export function IncidentDetailsPage() {
     onSuccess: async () => {
       setCommentDraft("");
       setActionError(null);
+      pushToast({ kind: "success", message: t("toastCommentAdded") });
       await queryClient.invalidateQueries({ queryKey: ["incident", incidentId] });
     },
     onError: (error) => {
       setActionError((error as Error).message);
+      pushToast({ kind: "error", message: (error as Error).message });
     },
   });
 
@@ -165,10 +173,12 @@ export function IncidentDetailsPage() {
       }),
     onSuccess: async () => {
       setActionError(null);
+      pushToast({ kind: "success", message: t("toastCommentDeleted") });
       await queryClient.invalidateQueries({ queryKey: ["incident", incidentId] });
     },
     onError: (error) => {
       setActionError((error as Error).message);
+      pushToast({ kind: "error", message: (error as Error).message });
     },
   });
 
@@ -181,12 +191,14 @@ export function IncidentDetailsPage() {
       }),
     onSuccess: async () => {
       setActionError(null);
+      pushToast({ kind: "success", message: t("toastIncidentDeleted") });
       await queryClient.invalidateQueries({ queryKey: ["incidents"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       navigate("/incidents");
     },
     onError: (error) => {
       setActionError((error as Error).message);
+      pushToast({ kind: "error", message: (error as Error).message });
     },
   });
 

@@ -2,6 +2,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useI18n } from "../../i18n/useI18n";
 import { canCreateIncident } from "../../domain/permissions";
 import { useAuthStore } from "../../state/authStore";
+import { useToastStore } from "../../state/toastStore";
 import { useUiSettingsStore } from "../../state/uiSettingsStore";
 
 export function AppLayout() {
@@ -11,10 +12,12 @@ export function AppLayout() {
   const autoRefreshEnabled = useUiSettingsStore((state) => state.autoRefreshEnabled);
   const setAutoRefreshEnabled = useUiSettingsStore((state) => state.setAutoRefreshEnabled);
   const { language, setLanguage, t } = useI18n();
+  const pushToast = useToastStore((state) => state.pushToast);
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
+    pushToast({ kind: "info", message: t("toastLoggedOut") });
     navigate("/login");
   };
 

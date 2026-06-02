@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { getDemoAccounts, loginRequest } from "../../api/auth";
 import { useI18n } from "../../i18n/useI18n";
 import { useAuthStore } from "../../state/authStore";
+import { useToastStore } from "../../state/toastStore";
 
 export function LoginPage() {
   const { t } = useI18n();
@@ -13,12 +14,17 @@ export function LoginPage() {
   const [isCapsLockOn, setIsCapsLockOn] = useState(false);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const login = useAuthStore((state) => state.login);
+  const pushToast = useToastStore((state) => state.pushToast);
   const navigate = useNavigate();
   const loginMutation = useMutation({
     mutationFn: loginRequest,
     onSuccess: (session) => {
       login(session);
+      pushToast({ kind: "success", message: t("toastLoginSuccess") });
       navigate("/dashboard");
+    },
+    onError: (error) => {
+      pushToast({ kind: "error", message: (error as Error).message });
     },
   });
 

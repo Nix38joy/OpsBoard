@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { registerRequest } from "../../api/auth";
 import { useI18n } from "../../i18n/useI18n";
 import { useAuthStore } from "../../state/authStore";
+import { useToastStore } from "../../state/toastStore";
 
 function getPasswordStrength(password: string): 0 | 1 | 2 | 3 {
   if (password.length === 0) {
@@ -34,12 +35,17 @@ export function RegisterPage() {
   const [mismatchError, setMismatchError] = useState<string | null>(null);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const login = useAuthStore((state) => state.login);
+  const pushToast = useToastStore((state) => state.pushToast);
   const navigate = useNavigate();
   const registerMutation = useMutation({
     mutationFn: registerRequest,
     onSuccess: (session) => {
       login(session);
+      pushToast({ kind: "success", message: t("toastRegisterSuccess") });
       navigate("/dashboard");
+    },
+    onError: (error) => {
+      pushToast({ kind: "error", message: (error as Error).message });
     },
   });
 

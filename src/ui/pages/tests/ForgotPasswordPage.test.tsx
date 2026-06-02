@@ -1,13 +1,15 @@
+import { vi, describe, beforeEach, it, expect } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ForgotPasswordPage } from "./ForgotPasswordPage";
-import { renderWithProviders } from "../../test/renderWithProviders";
-import { useAuthStore } from "../../state/authStore";
+import { ForgotPasswordPage } from "../ForgotPasswordPage";
+import { renderWithProviders } from "../../../test/renderWithProviders";
+import { useAuthStore } from "../../../state/authStore";
 
 const requestPasswordResetMock = vi.fn();
 
-vi.mock("../../api/auth", async () => {
-  const actual = await vi.importActual<typeof import("../../api/auth")>("../../api/auth");
+// Изменено на три точки (../../../), чтобы успешно выйти в корень src/
+vi.mock("../../../api/auth", async () => {
+  const actual = await vi.importActual<typeof import("../../../api/auth")>("../../../api/auth");
   return {
     ...actual,
     requestPasswordReset: (...args: unknown[]) => requestPasswordResetMock(...args),
@@ -41,4 +43,3 @@ describe("ForgotPasswordPage", () => {
       .toBeInTheDocument();
   });
 });
-

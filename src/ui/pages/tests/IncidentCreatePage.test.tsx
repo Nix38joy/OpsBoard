@@ -1,13 +1,13 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { IncidentCreatePage } from "./IncidentCreatePage";
-import { renderWithProviders } from "../../test/renderWithProviders";
-import { useAuthStore } from "../../state/authStore";
+import { IncidentCreatePage } from "../IncidentCreatePage";
+import { renderWithProviders } from "../../../test/renderWithProviders";
+import { useAuthStore } from "../../../state/authStore";
 
 const createIncidentMock = vi.fn();
 
 vi.mock("../../api/incidents", async () => {
-  const actual = await vi.importActual<typeof import("../../api/incidents")>("../../api/incidents");
+  const actual = await vi.importActual<typeof import("../../../api/incidents")>("../../api/incidents");
   return {
     ...actual,
     getIncidentFormOptions: vi.fn().mockResolvedValue({

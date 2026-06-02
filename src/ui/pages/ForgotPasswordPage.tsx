@@ -4,17 +4,23 @@ import { Link, useNavigate } from "react-router-dom";
 import { requestPasswordReset } from "../../api/auth";
 import { useI18n } from "../../i18n/useI18n";
 import { useAuthStore } from "../../state/authStore";
+import { useToastStore } from "../../state/toastStore";
 
 export function ForgotPasswordPage() {
   const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const pushToast = useToastStore((state) => state.pushToast);
   const navigate = useNavigate();
   const resetMutation = useMutation({
     mutationFn: requestPasswordReset,
     onSuccess: (result) => {
       setSuccessMessage(result.message);
+      pushToast({ kind: "info", message: t("toastPasswordResetSent") });
+    },
+    onError: (error) => {
+      pushToast({ kind: "error", message: (error as Error).message });
     },
   });
 
