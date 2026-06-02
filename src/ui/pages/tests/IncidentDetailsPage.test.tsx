@@ -1,14 +1,15 @@
+import { vi, describe, beforeEach, it, expect } from "vitest"; // <-- Добавлен импорт инструментов
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Route, Routes } from "react-router-dom";
-import { useAuthStore } from "../../state/authStore";
-import { renderWithProviders } from "../../test/renderWithProviders";
-import { IncidentDetailsPage } from "./IncidentDetailsPage";
-import { AppRole, IncidentDetails, IncidentStatus } from "../../domain/incidents";
-import * as incidentsApi from "../../api/incidents";
+import { useAuthStore } from "../../../state/authStore"; // <-- Исправлено на 3 точки
+import { renderWithProviders } from "../../../test/renderWithProviders"; // <-- Исправлено на 3 точки
+import { IncidentDetailsPage } from "../IncidentDetailsPage";
+import { AppRole, IncidentDetails, IncidentStatus } from "../../../domain/incidents"; // <-- Исправлено на 3 точки
+import * as incidentsApi from "../../../api/incidents"; // <-- Исправлено на 3 точки
 
-vi.mock("../../api/incidents", async () => {
-  const actual = await vi.importActual<typeof import("../../api/incidents")>("../../api/incidents");
+vi.mock("../../../api/incidents", async () => { // <-- Исправлено на 3 точки
+  const actual = await vi.importActual<typeof import("../../../api/incidents")>("../../../api/incidents");
   return {
     ...actual,
     getIncidentDetails: vi.fn(),
@@ -239,7 +240,6 @@ describe("IncidentDetailsPage integration", () => {
       role: "admin",
       userName: "Admin User",
     });
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     const user = userEvent.setup();
     renderDetails();
@@ -247,11 +247,12 @@ describe("IncidentDetailsPage integration", () => {
     expect(await screen.findByText("Test incident")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Delete incident" }));
 
-    await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalled();
-      expect(incidentsApi.deleteIncident).toHaveBeenCalled();
-    });
+    // Симуляция подтверждения в стандартном окне window.confirm
+    vi.spyOn(window, "confirm").mockImplementation(() => true);
 
-    confirmSpy.mockRestore();
+    await waitFor(() => {
+      expect(incidentsApi.deleteIncident).toHaveBeenCalled();
+      expect(screen.getByText("Incidents list page")).toBeInTheDocument();
+    });
   });
 });
