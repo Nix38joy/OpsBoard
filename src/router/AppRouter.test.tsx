@@ -1,3 +1,5 @@
+import { describe, it, beforeEach, expect } from "vitest";
+import "@testing-library/jest-dom"; // Обеспечивает работу .toBeInTheDocument()
 import { screen } from "@testing-library/react";
 import { AppRouter } from "./AppRouter";
 import { renderWithProviders } from "../test/renderWithProviders";
