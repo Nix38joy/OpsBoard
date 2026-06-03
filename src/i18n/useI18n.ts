@@ -8,12 +8,18 @@ export function useI18n() {
 
   const t = useCallback(
     (key: TranslationKey, vars?: Record<string, string | number>) => {
-      const template = translations[language][key] ?? translations.en[key];
+      // Подстраховка: если перевода нет, берем английский, иначе пустую строку
+      const template: string = translations[language]?.[key] ?? translations.en?.[key] ?? "";
+      
       if (!vars) {
         return template;
       }
+      
       return Object.entries(vars).reduce(
-        (acc, [varName, value]) => acc.replaceAll(`{${varName}}`, String(value)),
+        (acc, [varName, value]) => {
+          // Используем регулярное выражение с флагом 'g' вместо replaceAll
+          return acc.replace(new RegExp(`{${varName}}`, "g"), String(value));
+        },
         template,
       );
     },
