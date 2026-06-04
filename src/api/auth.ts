@@ -37,8 +37,8 @@ const DEMO_USERS: Array<{
 }> = [
   {
     userName: "Admin User",
-    email: "admin@opsboard.dev",
-    password: "Admin123!",
+    email: "root-master-admin@opsboard.dev", // 👈 Изменено на более сложный email
+    password: "A@8k$mP2!xL9vQ4z",           // 👈 Изменено на сложный 16-значный пароль
     role: "admin",
   },
   {
