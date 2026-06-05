@@ -1,3 +1,4 @@
+import { describe, it, expect } from "vitest";
 import { IncidentStatus } from "./incidents";
 import {
   canAddComment,
@@ -60,4 +61,5 @@ describe("permissions", () => {
     expect(getAllowedStatusTransitions("closed", "admin")).toEqual(["in_progress"]);
   });
 });
+
 
