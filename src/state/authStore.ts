@@ -25,7 +25,7 @@ type AuthState = {
   isAuthenticated: boolean;
   role: AppRole | null;
   userName: string | null;
-  login: (params: AuthSession) => void;
+  login: (session: AuthSession) => void;
   logout: () => void;
 };
 
@@ -35,13 +35,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: Boolean(initialSession),
   role: initialSession?.role ?? null,
   userName: initialSession?.userName ?? null,
-  login: ({ userName, role }) =>
+  login: (session) =>
     set(() => {
-      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ userName, role }));
+      // 💡 ИСПРАВЛЕНО: Сохраняем весь объект сессии целиком, чтобы email и accessToken не терялись
+      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
       return {
         isAuthenticated: true,
-        userName,
-        role,
+        userName: session.userName,
+        role: session.role,
       };
     }),
   logout: () =>
