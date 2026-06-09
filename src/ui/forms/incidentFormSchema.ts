@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { translations, TranslationKey } from "../../i18n/translations";
+import { translations } from "../../i18n/translations";
 
-type TranslateFn = (key: TranslationKey) => string;
+// 💡 Динамически вытаскиваем строгий тип ключей переводов из нашей новой JSON-архитектуры
+type TranslateFn = (key: keyof typeof translations.en) => string;
 
 const fallbackTranslate: TranslateFn = (key) => translations.en[key];
 

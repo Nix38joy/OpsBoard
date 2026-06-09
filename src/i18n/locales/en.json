@@ -180,5 +180,8 @@
   "slaFilterBreached": "Breached",
   "validationTitleMin": "Title must contain at least 5 characters.",
   "validationDescriptionMin": "Description must contain at least 20 characters.",
-  "validationDescriptionMax": "Description is too long."
+  "validationDescriptionMax": "Description is too long.",
+    "validationTeamRequired": "Please select a team.",
+    "validationAssigneeRequired": "Please select an assignee."
 }
+

@@ -180,5 +180,8 @@
   "slaFilterBreached": "Нарушен",
   "validationTitleMin": "Название должно содержать минимум 5 символов.",
   "validationDescriptionMin": "Описание должно содержать минимум 20 символов.",
-  "validationDescriptionMax": "Описание слишком длинное."
+  "validationDescriptionMax": "Описание слишком длинное.",
+  "validationTeamRequired": "Пожалуйста, выберите команду.",  
+  "validationAssigneeRequired": "Пожалуйста, выберите исполнителя."
 }
+
