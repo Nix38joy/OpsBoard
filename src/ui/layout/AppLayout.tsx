@@ -4,6 +4,7 @@ import { canCreateIncident } from "../../domain/permissions";
 import { useAuthStore } from "../../state/authStore";
 import { useToastStore } from "../../state/toastStore";
 import { useUiSettingsStore } from "../../state/uiSettingsStore";
+import { ToastHost } from "../feedback/ToastHost"; 
 
 export function AppLayout() {
   const role = useAuthStore((state) => state.role);
@@ -23,6 +24,9 @@ export function AppLayout() {
 
   return (
     <div className="app-shell">
+      {/* 💡 ИСПРАВЛЕНО: Примонтировали компонент обратной связи, чтобы тосты рендерились на UI */}
+      <ToastHost /> 
+
       <header className="topbar">
         <Link className="brand" to="/dashboard">
           OpsBoard
