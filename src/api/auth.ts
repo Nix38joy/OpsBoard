@@ -38,7 +38,7 @@ const DEMO_USERS: Array<{
   {
     userName: "Admin User",
     email: "ger32390man@gmail.com",
-    password: "A88k$mP2!xL9vQ4z",          
+    password: "YAkrevedko253879@",          
     role: "admin",
   },
   {
