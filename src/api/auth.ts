@@ -29,6 +29,7 @@ type StoredAuthUser = {
 
 const USERS_STORAGE_KEY = "opsboard.auth.users.v1";
 
+// 🌟 ОБНОВЛЕННЫЙ МАССИВ С РЕАЛИСТИЧНЫМИ ДАННЫМИ ДЛЯ ВХОДА
 const DEMO_USERS: Array<{
   userName: string;
   email: string;
@@ -36,21 +37,21 @@ const DEMO_USERS: Array<{
   role: AppRole;
 }> = [
   {
-    userName: "Admin User",
-    email: "ger32390man@gmail.com",
-    password: "YAkrevedko253879@",          
+    userName: "Александр Петров (Admin)",
+    email: "a.petrov@opsboard.ru",
+    password: "SecureAdmin2026!",          
     role: "admin",
   },
   {
-    userName: "Operator User",
-    email: "operator@opsboard.dev",
-    password: "Operator123!",
+    userName: "Дмитрий Волков (Operator)",
+    email: "d.volkov@opsboard.ru",
+    password: "OpsOperator2026!",
     role: "operator",
   },
   {
-    userName: "Viewer User",
-    email: "viewer@opsboard.dev",
-    password: "Viewer123!",
+    userName: "Елена Сидорова (Viewer)",
+    email: "e.sidorova@opsboard.ru",
+    password: "SimpleViewer2026!",
     role: "viewer",
   },
 ];
@@ -200,7 +201,6 @@ export async function requestPasswordReset(emailInput: string): Promise<{ messag
   const email = normalizeEmail(emailInput);
   validateEmail(email);
 
-  // In real auth flows, keep response generic to avoid account enumeration.
   return {
     message: "If an account exists, password reset instructions have been sent.",
   };
