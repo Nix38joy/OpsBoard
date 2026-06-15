@@ -125,7 +125,7 @@ export function LoginPage() {
           <summary style={{ cursor: "pointer", marginBottom: "8px", fontWeight: "bold" }}>
             {t("loginDemoAccounts")}
           </summary>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%" }}>
             {getDemoAccounts().map((account) => (
               <button
                 key={account.email}
@@ -137,21 +137,23 @@ export function LoginPage() {
                   justifyContent: "space-between",
                   display: "flex",
                   alignItems: "center",
-                  padding: "10px 12px"
+                  padding: "10px 12px",
+                  flexWrap: "wrap", // 🌟 Позволяет тексту переноситься, если экран узкий
+                  gap: "6px"
                 }}
                 disabled={loginMutation.isPending}
                 onClick={() => handleQuickLogin(account.email, account.password)}
               >
-                <div style={{ display: "flex", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "4px" }}>
                   <span 
                     className={`pill pill-status-${account.role === "admin" ? "closed" : account.role === "operator" ? "in_progress" : "open"}`} 
-                    style={{ marginRight: "10px", fontSize: "0.75rem", minWidth: "75px", textAlign: "center" }}
+                    style={{ fontSize: "0.7rem", minWidth: "75px", textAlign: "center" }}
                   >
                     {account.role.toUpperCase()}
                   </span>
-                  <strong>{account.userName}</strong>
+                  <strong style={{ fontSize: "0.85rem" }}>{account.userName}</strong>
                 </div>
-                <small className="muted-text" style={{ fontSize: "0.8rem", opacity: 0.7 }}>
+                <small className="muted-text" style={{ fontSize: "0.75rem", opacity: 0.7, wordBreak: "break-all" }}>
                   {account.email}
                 </small>
               </button>
