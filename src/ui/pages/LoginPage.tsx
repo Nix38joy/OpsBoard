@@ -16,6 +16,7 @@ export function LoginPage() {
   const login = useAuthStore((state) => state.login);
   const pushToast = useToastStore((state) => state.pushToast);
   const navigate = useNavigate();
+
   const loginMutation = useMutation({
     mutationFn: loginRequest,
     onSuccess: (session) => {
@@ -39,6 +40,13 @@ export function LoginPage() {
     loginMutation.mutate({ email, password });
   };
 
+  // ⚡ Функция быстрого входа (заполняет инпуты и сразу отправляет мутацию)
+  const handleQuickLogin = (demoEmail: string, demoPassword: string) => {
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    loginMutation.mutate({ email: demoEmail, password: demoPassword });
+  };
+
   const handlePasswordKeyEvent = (event: KeyboardEvent<HTMLInputElement>) => {
     setIsCapsLockOn(event.getModifierState("CapsLock"));
   };
@@ -47,6 +55,7 @@ export function LoginPage() {
     <div className="page center-page">
       <form className="card login-card" onSubmit={onSubmit}>
         <h1>{t("loginTitle")}</h1>
+        
         <label className="field">
           <span>{t("loginEmail")}</span>
           <input
@@ -57,6 +66,7 @@ export function LoginPage() {
             required
           />
         </label>
+        
         <label className="field">
           <span>{t("loginPassword")}</span>
           <div className="input-with-action">
@@ -89,12 +99,15 @@ export function LoginPage() {
           </div>
           {isCapsLockOn && <p className="warning-text">{t("loginCapsLockOn")}</p>}
         </label>
+        
         {loginMutation.isError && (
           <p className="error-text">{(loginMutation.error as Error).message}</p>
         )}
+        
         <button className="btn" type="submit" disabled={loginMutation.isPending}>
           {loginMutation.isPending ? t("loginSigningIn") : t("loginSignIn")}
         </button>
+        
         <p className="muted-text">
           <Link className="table-action-link" to="/forgot-password">
             {t("loginForgotPassword")}
@@ -106,17 +119,44 @@ export function LoginPage() {
             {t("loginGoToRegister")}
           </Link>
         </p>
-        <details className="section-gap">
-          <summary>{t("loginDemoAccounts")}</summary>
-          <ul className="stack-list">
+
+        {/* Интерактивный пульт быстрого входа в один клик */}
+        <details className="section-gap" open>
+          <summary style={{ cursor: "pointer", marginBottom: "8px", fontWeight: "bold" }}>
+            {t("loginDemoAccounts")}
+          </summary>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {getDemoAccounts().map((account) => (
-              <li key={account.email} className="stack-item">
-                <p>
-                  <strong>{account.role}</strong>: {account.email} / {account.password}
-                </p>
-              </li>
+              <button
+                key={account.email}
+                type="button"
+                className="btn ghost"
+                style={{
+                  textAlign: "left",
+                  width: "100%",
+                  justifyContent: "space-between",
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "10px 12px"
+                }}
+                disabled={loginMutation.isPending}
+                onClick={() => handleQuickLogin(account.email, account.password)}
+              >
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <span 
+                    className={`pill pill-status-${account.role === "admin" ? "closed" : account.role === "operator" ? "in_progress" : "open"}`} 
+                    style={{ marginRight: "10px", fontSize: "0.75rem", minWidth: "75px", textAlign: "center" }}
+                  >
+                    {account.role.toUpperCase()}
+                  </span>
+                  <strong>{account.userName}</strong>
+                </div>
+                <small className="muted-text" style={{ fontSize: "0.8rem", opacity: 0.7 }}>
+                  {account.email}
+                </small>
+              </button>
             ))}
-          </ul>
+          </div>
         </details>
       </form>
     </div>
