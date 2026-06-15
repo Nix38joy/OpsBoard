@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { getIncidents } from "../../api/incidents";
 import { useI18n } from "../../i18n/useI18n";
@@ -24,6 +24,23 @@ export function IncidentsPage() {
     resetFilters,
     setFromUrl,
   } = useIncidentsFiltersStore();
+
+  // Локальный стейт для мгновенного набора текста в инпуте поиска
+  const [localSearch, setLocalSearch] = useState(filters.search);
+
+  // Синхронизируем локальный инпут при внешнем сбросе фильтров
+  useEffect(() => {
+    setLocalSearch(filters.search);
+  }, [filters.search]);
+
+  // Паттерн Debounce: отправляем поисковый запрос только при паузе ввода в 400мс
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(localSearch);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [localSearch, setSearch]);
 
   useEffect(() => {
     const pageFromUrl = Number(searchParams.get("page") ?? "1");
@@ -160,8 +177,8 @@ export function IncidentsPage() {
             <input
               className="input"
               placeholder={t("incidentsSearchPlaceholder")}
-              value={filters.search}
-              onChange={(event) => setSearch(event.target.value)}
+              value={localSearch}
+              onChange={(event) => setLocalSearch(event.target.value)}
             />
           </label>
           <label className="field">
