@@ -153,9 +153,7 @@ export function LoginPage() {
                   </span>
                   <strong style={{ fontSize: "0.85rem" }}>{account.userName}</strong>
                 </div>
-                <small className="muted-text" style={{ fontSize: "0.75rem", opacity: 0.7, wordBreak: "break-all" }}>
-                  {account.email}
-                </small>
+               
               </button>
             ))}
           </div>

@@ -9,6 +9,58 @@ import { formatSlaRemaining, getIncidentSla } from "../../domain/sla";
 import { useIncidentsFiltersStore } from "../../state/incidentsFiltersStore";
 import { useUiSettingsStore } from "../../state/uiSettingsStore";
 
+function SlaCell({ item }: { item: any }) {
+  const { t } = useI18n();
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const sla = getIncidentSla(item);
+    // Если SLA не отслеживается или уже нарушен, таймер запускать не нужно
+    if (!sla.isTracked || sla.isBreached) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [item]);
+
+  // Пересчитываем SLA на основе текущего времени `now`
+  const sla = getIncidentSla(item);
+
+  if (!sla.isTracked) {
+    return <span className="muted-text">{t("slaNotTracked")}</span>;
+  }
+
+  if (sla.isBreached) {
+    return <span className="pill pill-sla-breached">{t("slaBreached")}</span>;
+  }
+
+  // Рассчитываем реальный остаток времени прямо сейчас
+  const remainingMs = sla.remainingMs ? Math.max(0, sla.remainingMs - (Date.now() - now)) : 0;
+
+  // Если время вышло, пока мы смотрели на экран — плашка станет красной
+  if (remainingMs <= 0) {
+    return <span className="pill pill-sla-breached">{t("slaBreached")}</span>;
+  }
+
+  if (sla.isAtRisk) {
+    return (
+      <span className="pill pill-sla-risk">
+        {t("slaAtRisk")}: {t("slaIn", { time: formatSlaRemaining(remainingMs) })}
+      </span>
+    );
+  }
+
+  return (
+    <span className="pill pill-sla-ok">
+      {t("slaIn", { time: formatSlaRemaining(remainingMs) })}
+    </span>
+  );
+}
+
 export function IncidentsPage() {
   const autoRefreshEnabled = useUiSettingsStore((state) => state.autoRefreshEnabled);
   const { t } = useI18n();
@@ -292,21 +344,9 @@ export function IncidentsPage() {
                           <td>{item.team}</td>
                           <td>{item.assignee}</td>
                           <td>{new Date(item.updatedAt).toLocaleString()}</td>
-                          <td>
-                            {!sla.isTracked ? (
-                              <span className="muted-text">{t("slaNotTracked")}</span>
-                            ) : sla.isBreached ? (
-                              <span className="pill pill-sla-breached">{t("slaBreached")}</span>
-                            ) : sla.isAtRisk ? (
-                              <span className="pill pill-sla-risk">
-                                {t("slaAtRisk")}: {t("slaIn", { time: formatSlaRemaining(sla.remainingMs ?? 0) })}
-                              </span>
-                            ) : (
-                              <span className="pill pill-sla-ok">
-                                {t("slaIn", { time: formatSlaRemaining(sla.remainingMs ?? 0) })}
-                              </span>
-                            )}
-                          </td>
+                           <td>
+                           <SlaCell item={item} />
+                        </td>
                           <td>
                             <Link className="table-action-link" to={`/incidents/${item.id}`}>
                               {t("incidentsOpen")}
