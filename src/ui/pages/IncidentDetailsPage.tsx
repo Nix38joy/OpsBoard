@@ -143,7 +143,7 @@ export function IncidentDetailsPage() {
     },
   });
 
-  const commentMutation = useMutation({
+   const commentMutation = useMutation({
     mutationFn: (message: string) =>
       addIncidentComment({
         incidentId: incidentId ?? "",
@@ -151,17 +151,45 @@ export function IncidentDetailsPage() {
         authorName: userName ?? "Unknown user",
         message,
       }),
-    onSuccess: async () => {
-      setCommentDraft("");
-      setActionError(null);
-      pushToast({ kind: "success", message: t("toastCommentAdded") });
-      await queryClient.invalidateQueries({ queryKey: ["incident", incidentId] });
+    onMutate: async (newMessage) => {
+      await queryClient.cancelQueries({ queryKey: ["incident", incidentId] });
+      const previousDetails = queryClient.getQueryData(["incident", incidentId]);
+
+      queryClient.setQueryData(["incident", incidentId], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          comments: [
+            ...old.comments,
+            {
+              id: `TEMP-${Date.now()}`,
+              authorName: userName ?? "You",
+              message: newMessage,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        };
+      });
+
+      return { previousDetails };
     },
-    onError: (error) => {
+    onError: (error, newMessage, context) => {
+      if (context?.previousDetails) {
+        queryClient.setQueryData(["incident", incidentId], context.previousDetails);
+      }
       setActionError((error as Error).message);
       pushToast({ kind: "error", message: (error as Error).message });
     },
+    onSuccess: () => {
+      setCommentDraft("");
+      setActionError(null);
+      pushToast({ kind: "success", message: t("toastCommentAdded") });
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["incident", incidentId] });
+    },
   });
+
 
   const deleteCommentMutation = useMutation({
     mutationFn: (commentId: string) =>
