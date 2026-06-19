@@ -27,7 +27,7 @@ type StoredAuthUser = {
   createdAt: string;
 };
 
-const USERS_STORAGE_KEY = "opsboard.auth.users.v1";
+const USERS_STORAGE_KEY = "pulseboard.auth.users.v1";
 
 // 🌟 ОБНОВЛЕННЫЙ МАССИВ С РЕАЛИСТИЧНЫМИ ДАННЫМИ ДЛЯ ВХОДА
 const DEMO_USERS: Array<{
