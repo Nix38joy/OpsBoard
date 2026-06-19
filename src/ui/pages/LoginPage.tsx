@@ -54,7 +54,7 @@ export function LoginPage() {
   return (
     <div className="page center-page">
       <form className="card login-card" onSubmit={onSubmit}>
-        <h1>{t("loginTitle")}</h1>
+        <h1>Вход в PulseBoard</h1>
         
         <label className="field">
           <span>{t("loginEmail")}</span>
@@ -138,7 +138,7 @@ export function LoginPage() {
                   display: "flex",
                   alignItems: "center",
                   padding: "10px 12px",
-                  flexWrap: "wrap", // 🌟 Позволяет тексту переноситься, если экран узкий
+                  flexWrap: "wrap", 
                   gap: "6px"
                 }}
                 disabled={loginMutation.isPending}
