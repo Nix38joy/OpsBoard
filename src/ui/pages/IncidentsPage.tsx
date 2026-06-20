@@ -9,13 +9,39 @@ import { formatSlaRemaining, getIncidentSla } from "../../domain/sla";
 import { useIncidentsFiltersStore } from "../../state/incidentsFiltersStore";
 import { useUiSettingsStore } from "../../state/uiSettingsStore";
 
+function HighlightedText({ text, search }: { text: string; search: string }) {
+  if (!search.trim()) {
+    return <span>{text}</span>;
+  }
+
+  const escapedSearch = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+  const regex = new RegExp(`(${escapedSearch})`, "gi");
+  const parts = text.split(regex);
+
+  return (
+    <span>
+      {parts.map((part, index) =>
+        regex.test(part) ? (
+          <mark 
+            key={index} 
+            style={{ backgroundColor: "#ffe066", color: "#000", padding: "0 2px", borderRadius: "2px" }}
+          >
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </span>
+  );
+}
+
 function SlaCell({ item }: { item: any }) {
   const { t } = useI18n();
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     const sla = getIncidentSla(item);
-    // Если SLA не отслеживается или уже нарушен, таймер запускать не нужно
     if (!sla.isTracked || sla.isBreached) {
       return;
     }
@@ -27,7 +53,6 @@ function SlaCell({ item }: { item: any }) {
     return () => clearInterval(timer);
   }, [item]);
 
-  // Пересчитываем SLA на основе текущего времени `now`
   const sla = getIncidentSla(item);
 
   if (!sla.isTracked) {
@@ -38,10 +63,8 @@ function SlaCell({ item }: { item: any }) {
     return <span className="pill pill-sla-breached">{t("slaBreached")}</span>;
   }
 
-  // Рассчитываем реальный остаток времени прямо сейчас
   const remainingMs = sla.remainingMs ? Math.max(0, sla.remainingMs - (Date.now() - now)) : 0;
 
-  // Если время вышло, пока мы смотрели на экран — плашка станет красной
   if (remainingMs <= 0) {
     return <span className="pill pill-sla-breached">{t("slaBreached")}</span>;
   }
@@ -77,15 +100,12 @@ export function IncidentsPage() {
     setFromUrl,
   } = useIncidentsFiltersStore();
 
-  // Локальный стейт для мгновенного набора текста в инпуте поиска
   const [localSearch, setLocalSearch] = useState(filters.search);
 
-  // Синхронизируем локальный инпут при внешнем сбросе фильтров
   useEffect(() => {
     setLocalSearch(filters.search);
   }, [filters.search]);
 
-  // Паттерн Debounce: отправляем поисковый запрос только при паузе ввода в 400мс
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearch(localSearch);
@@ -140,7 +160,6 @@ export function IncidentsPage() {
     }
 
     setFromUrl(nextState);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -221,8 +240,7 @@ export function IncidentsPage() {
           {incidentsQuery.isFetching ? t("commonRefreshing") : t("commonRefreshNow")}
         </button>
       </div>
-
-      <section className="card filters-card">
+            <section className="card filters-card">
         <div className="filters-grid">
           <label className="field">
             <span>{t("incidentsSearch")}</span>
@@ -321,13 +339,14 @@ export function IncidentsPage() {
                   </thead>
                   <tbody>
                     {incidentsQuery.data.items.map((item) => {
-                      const sla = getIncidentSla(item);
                       return (
                         <tr key={item.id}>
                           <td>
                             <Link to={`/incidents/${item.id}`}>{item.id}</Link>
                           </td>
-                          <td>{item.title}</td>
+                          <td>
+                            <HighlightedText text={item.title} search={filters.search} />
+                          </td>
                           <td>
                             <span className={`pill pill-severity-${item.severity}`}>
                               {severityLabelByValue[item.severity]}
@@ -344,9 +363,9 @@ export function IncidentsPage() {
                           <td>{item.team}</td>
                           <td>{item.assignee}</td>
                           <td>{new Date(item.updatedAt).toLocaleString()}</td>
-                           <td>
-                           <SlaCell item={item} />
-                        </td>
+                          <td>
+                            <SlaCell item={item} />
+                          </td>
                           <td>
                             <Link className="table-action-link" to={`/incidents/${item.id}`}>
                               {t("incidentsOpen")}
@@ -392,3 +411,4 @@ export function IncidentsPage() {
     </div>
   );
 }
+
