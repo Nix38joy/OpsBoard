@@ -22,12 +22,20 @@ function HighlightedText({ text, search }: { text: string; search: string }) {
     <span>
       {parts.map((part, index) =>
         regex.test(part) ? (
-          <mark 
-            key={index} 
-            style={{ backgroundColor: "#ffe066", color: "#000", padding: "0 2px", borderRadius: "2px" }}
-          >
-            {part}
-          </mark>
+         <mark 
+  key={index} 
+  style={{ 
+    backgroundColor: "#ffe066", 
+    color: "#000", 
+    padding: "0",          // 🌟 Убираем боковые отступы, чтобы текст не расширялся
+    margin: "0",           // 🌟 Убираем внешние отступы
+    borderRadius: "2px",
+    display: "inline"      // 🌟 Гарантируем строчное поведение
+  }}
+>
+  {part}
+</mark>
+
         ) : (
           part
         )
