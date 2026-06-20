@@ -318,7 +318,7 @@ export function IncidentsPage() {
         </button>
       </section>
 
-      <div className="card">
+      <div className="card" style={{ minHeight: "550px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
         {incidentsQuery.isLoading && <p>{t("incidentsLoading")}</p>}
         {isRefreshing && <p className="muted-text">{t("incidentsUpdating")}</p>}
         {incidentsQuery.isError && (
