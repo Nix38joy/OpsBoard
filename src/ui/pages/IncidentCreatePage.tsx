@@ -12,6 +12,33 @@ import {
   createIncidentFormSchema,
 } from "../forms/incidentFormSchema";
 
+const REALISTIC_TEMPLATES = [
+  {
+    title: "Сбой платежного шлюза СБП на кассах самообслуживания",
+    description: "Покупатели жалуются на ошибки 504 при попытке оплаты по QR-коду. Очереди на кассах растут. Требуется перезагрузка инстанса авторизации.",
+    severity: "critical" as const,
+    priority: "p1" as const,
+  },
+  {
+    title: "Отказ сканеров штрих-кодов в зоне сортировки А-3",
+    description: "После обновления прошивки ТСД не могут подключиться к внутренней Wi-Fi сети склада. Зависла отгрузка 14 фур.",
+    severity: "high" as const,
+    priority: "p2" as const,
+  },
+  {
+    title: "Аварийное падение давления в контуре охлаждения серверной №2",
+    description: "Датчики зафиксировали утечку хладагента в главном чиллере. Температура в стойках растет, кондиционирование работает на резервных мощностях.",
+    severity: "high" as const,
+    priority: "p1" as const,
+  },
+  {
+    title: "Плановое обновление сертификатов безопасности веб-портала",
+    description: "Необходимо обновить SSL-сертификаты для внешних доменов. Работы согласованы в технологическое окно с минимальной нагрузкой.",
+    severity: "low" as const,
+    priority: "p4" as const,
+  }
+];
+
 export function IncidentCreatePage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
@@ -43,6 +70,25 @@ export function IncidentCreatePage() {
     },
   });
 
+  const handleApplyTemplate = () => {
+    const randomIndex = Math.floor(Math.random() * REALISTIC_TEMPLATES.length);
+    const template = REALISTIC_TEMPLATES[randomIndex];
+
+    const availableTeams = optionsQuery.data?.teams ?? [];
+    const availableAssignees = optionsQuery.data?.assignees ?? [];
+
+    form.reset({
+      title: template.title,
+      description: template.description,
+      severity: template.severity,
+      priority: template.priority,
+      team: availableTeams[randomIndex % availableTeams.length] ?? "",
+      assignee: availableAssignees[randomIndex % availableAssignees.length] ?? "",
+    });
+
+    pushToast({ kind: "success", message: "Тестовый шаблон успешно заполнен!" });
+  };
+
   const onSubmit = form.handleSubmit((values) => {
     createMutation.mutate({
       ...values,
@@ -54,8 +100,21 @@ export function IncidentCreatePage() {
 
   return (
     <div className="page">
-      <h1>{t("createTitle")}</h1>
-      <p>{t("createSubtitle")}</p>
+      <div className="actions-row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <h1>{t("createTitle")}</h1>
+          <p>{t("createSubtitle")}</p>
+        </div>
+        <button
+          className="btn ghost"
+          type="button"
+          disabled={optionsQuery.isLoading}
+          onClick={handleApplyTemplate}
+          style={{ whiteSpace: "nowrap" }}
+        >
+          ⚡ Заполнить шаблон
+        </button>
+      </div>
 
       <form className="card form-grid" onSubmit={onSubmit}>
         {optionsQuery.isLoading && <p className="muted-text">{t("formLoadingOptions")}</p>}
