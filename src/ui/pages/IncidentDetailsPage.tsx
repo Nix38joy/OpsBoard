@@ -102,26 +102,47 @@ export function IncidentDetailsPage() {
     return () => window.clearInterval(timer);
   }, [undoDeadlineMs]);
 
+  
   const statusMutation = useMutation({
     mutationFn: (nextStatus: IncidentStatus) =>
       updateIncidentStatus({
         incidentId: incidentId ?? "",
-        nextStatus,
         role: role ?? "viewer",
+        nextStatus: nextStatus,
         actorName: userName ?? "Unknown user",
       }),
-    onSuccess: async () => {
-      setActionError(null);
-      pushToast({ kind: "success", message: t("toastStatusUpdated") });
-      await queryClient.invalidateQueries({ queryKey: ["incident", incidentId] });
-      await queryClient.invalidateQueries({ queryKey: ["incidents"] });
-      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    onMutate: async (nextStatus) => {
+      await queryClient.cancelQueries({ queryKey: ["incident", incidentId] });
+      const previousDetails = queryClient.getQueryData(["incident", incidentId]);
+
+      queryClient.setQueryData(["incident", incidentId], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          status: nextStatus,
+          updatedAt: new Date().toISOString(),
+        };
+      });
+
+      return { previousDetails };
     },
-    onError: (error) => {
+    onError: (error, _, context) => {
+      if (context?.previousDetails) {
+        queryClient.setQueryData(["incident", incidentId], context.previousDetails);
+      }
       setActionError((error as Error).message);
       pushToast({ kind: "error", message: (error as Error).message });
     },
+    onSuccess: () => {
+      setActionError(null);
+      pushToast({ kind: "success", message: t("toastStatusUpdated") });
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["incident", incidentId] });
+      await queryClient.invalidateQueries({ queryKey: ["incidents"] });
+    },
   });
+
 
   const undoStatusMutation = useMutation({
     mutationFn: () =>
@@ -173,7 +194,7 @@ export function IncidentDetailsPage() {
 
       return { previousDetails };
     },
-    onError: (error, newMessage, context) => {
+    onError: (error, _, context) => {
       if (context?.previousDetails) {
         queryClient.setQueryData(["incident", incidentId], context.previousDetails);
       }
