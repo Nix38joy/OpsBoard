@@ -251,6 +251,33 @@ export function IncidentDetailsPage() {
     },
   });
 
+    const handleShareSummary = () => {
+    const data = detailsQuery.data;
+    if (!data?.incident) return;
+
+    const currentStatus = statusLabelByValue[data.incident.status] || data.incident.status;
+    const currentSeverity = severityLabelByValue[data.incident.severity] || data.incident.severity;
+
+    const summaryText = [
+      `🚨 [PulseBoard] Инцидент #${incidentId}`,
+      `📌 Заголовок: ${data.incident.title}`,
+      `🔥 Критичность: ${currentSeverity.toUpperCase()} (${data.incident.priority.toUpperCase()})`,
+      `⚡ Статус: ${currentStatus.toUpperCase()}`,
+      `👤 Исполнитель: ${data.incident.assignee || "Не назначен"} (${data.incident.team || "Без команды"})`,
+      `🔗 Ссылка: ${window.location.href}`
+    ].join("\n");
+
+    navigator.clipboard.writeText(summaryText)
+      .then(() => {
+        pushToast({ kind: "success", message: "Сводка инцидента скопирована в буфер обмена!" });
+      })
+      .catch((error) => {
+        pushToast({ kind: "error", message: "Не удалось скопировать сводку" });
+        console.error(error);
+      });
+  };
+
+
   const onCommentSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     commentMutation.mutate(commentDraft);
@@ -282,7 +309,17 @@ export function IncidentDetailsPage() {
 
   return (
     <div className="page">
-      <h1>{t("detailsTitle")}</h1>
+      <h1>{t("detailsTitle")}
+         <div style={{ margin: "16px 0", display: "flex", gap: "12px" }}>
+        <button
+          className="btn ghost"
+          type="button"
+          onClick={handleShareSummary}
+        >
+          ⚡ Поделиться сводкой
+        </button>
+      </div>
+      </h1>
       <p>
         {t("detailsIncidentId")}: <strong>{incidentId}</strong>
       </p>
@@ -298,7 +335,7 @@ export function IncidentDetailsPage() {
         >
           {detailsQuery.isFetching ? t("commonRefreshing") : t("commonRefreshNow")}
         </button>
-      </div>
+        </div>
 
       {detailsQuery.isLoading && <p>{t("detailsLoading")}</p>}
       {detailsQuery.isFetching && !detailsQuery.isLoading && (
