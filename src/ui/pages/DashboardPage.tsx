@@ -59,6 +59,9 @@ export function DashboardPage() {
   const autoRefreshEnabled = useUiSettingsStore((state) => state.autoRefreshEnabled);
   const { t } = useI18n();
 
+  const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const availableTeams = ["DBA Team", "Network Team", "Support Team", "Infrastructure Team"];
+
   const metricsQuery = useQuery({
     queryKey: ["dashboard"],
     queryFn: getDashboardMetrics,
@@ -73,12 +76,11 @@ export function DashboardPage() {
       sla: "all", 
       overdueOnly: false, 
       page: 1,
-      search: "",      
-      pageSize: 50      
+      search: "",
+      pageSize: 50
     }),
     refetchInterval: autoRefreshEnabled ? LIVE_REFRESH_INTERVAL_MS : false,
   });
-
 
   const metricLabelById: Record<string, string> = {
     open: t("statusOpen"),
@@ -98,11 +100,13 @@ export function DashboardPage() {
     slaAtRiskActive: t("dashboardDescSlaAtRiskActive"),
   };
 
-  const activeIncidents = (incidentsQuery.data?.items ?? []).filter(
-    (item) => item.status === "open" || item.status === "in_progress"
-  );
+  const filteredIncidents = (incidentsQuery.data?.items ?? []).filter((item) => {
+    const isStatusActive = item.status === "open" || item.status === "in_progress";
+    const matchesTeam = selectedTeam === "all" || item.team === selectedTeam;
+    return isStatusActive && matchesTeam;
+  });
 
-  const hotIncidents = [...activeIncidents]
+  const hotIncidents = [...filteredIncidents]
     .map((item) => ({ item, sla: getIncidentSla(item) }))
     .filter((entry) => entry.sla.isTracked && !entry.sla.isBreached)
     .sort((a, b) => (a.sla.remainingMs ?? 0) - (b.sla.remainingMs ?? 0))
@@ -156,20 +160,36 @@ export function DashboardPage() {
         </>
       )}
 
-      {/* 🚨 СЕКЦИЯ ТОП-3 ГОРЯЩИХ ИНЦИДЕНТОВ ПО SLA */}
       <div className="card" style={{ marginTop: "32px" }}>
         <h2 style={{ marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
           <span>🚨</span> {t("dashboardLabelSlaAtRisk") || "Критические инциденты (SLA под угрозой)"}
         </h2>
-        <p className="muted-text" style={{ marginBottom: "20px" }}>
+        <p className="muted-text" style={{ marginBottom: "16px" }}>
           Инциденты в работе, требующие немедленного вмешательства дежурной смены.
         </p>
+
+        <div style={{ marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
+          <span style={{ fontSize: "0.9rem", opacity: 0.8, fontWeight: "bold" }}>Фильтр по командам:</span>
+          <select
+            className="input"
+            style={{ width: "220px", padding: "6px 12px", borderRadius: "6px" }}
+            value={selectedTeam}
+            onChange={(event) => setSelectedTeam(event.target.value)}
+          >
+            <option value="all">🌐 Все команды</option>
+            {availableTeams.map((team) => (
+              <option key={team} value={team}>
+                {team}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {incidentsQuery.isLoading && <p className="muted-text">{t("incidentsLoading")}</p>}
         
         {!incidentsQuery.isLoading && !incidentsQuery.isError && (
           hotIncidents.length === 0 ? (
-            <p className="muted-text">Отлично! Активных инцидентов с горящим SLA не обнаружено.</p>
+            <p className="muted-text">Отлично! Активных инцидентов с горящим SLA для выбранной команды не обнаружено.</p>
           ) : (
             <div className="table-wrap">
               <table className="table">
