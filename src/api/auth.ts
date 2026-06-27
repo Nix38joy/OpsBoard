@@ -9,6 +9,7 @@ type RegisterPayload = {
   userName: string;
   email: string;
   password: string;
+  role: AppRole; 
 };
 
 export type AuthSession = {
@@ -139,6 +140,9 @@ export async function registerRequest(payload: RegisterPayload): Promise<AuthSes
   const userName = payload.userName.trim();
   const email = normalizeEmail(payload.email);
   const password = payload.password;
+  
+  // 🌟 Защита: если кто-то попытается подделать запрос и стать админом, принудительно ставим viewer
+  const targetRole: AppRole = payload.role === "admin" ? "viewer" : payload.role;
 
   if (userName.length < 3) {
     throw new Error("User name must contain at least 3 characters.");
@@ -158,13 +162,14 @@ export async function registerRequest(payload: RegisterPayload): Promise<AuthSes
     userName,
     email,
     passwordHash: hashPassword(password),
-    role: "viewer",
+    role: targetRole, // 🌟 ИСПРАВЛЕНО: берем динамическую роль вместо жесткого "viewer"
     createdAt: new Date().toISOString(),
   };
 
   saveUsers([createdUser, ...users]);
   return createSessionFromUser(createdUser);
 }
+
 
 export async function loginRequest(payload: LoginPayload): Promise<AuthSession> {
   await new Promise((resolve) => setTimeout(resolve, 700));
