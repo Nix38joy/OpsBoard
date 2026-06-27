@@ -5,6 +5,7 @@ import { registerRequest } from "../../api/auth";
 import { useI18n } from "../../i18n/useI18n";
 import { useAuthStore } from "../../state/authStore";
 import { useToastStore } from "../../state/toastStore";
+import { AppRole } from "../../domain/incidents"; // 🌟 ИМПОРТ ТИПА РОЛИ
 
 function getPasswordStrength(password: string): 0 | 1 | 2 | 3 {
   if (password.length === 0) {
@@ -30,6 +31,7 @@ export function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState<AppRole>("viewer"); // 🌟 СТЕЙТ ДЛЯ ВЫБОРА РОЛИ
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isCapsLockOn, setIsCapsLockOn] = useState(false);
   const [mismatchError, setMismatchError] = useState<string | null>(null);
@@ -37,6 +39,7 @@ export function RegisterPage() {
   const login = useAuthStore((state) => state.login);
   const pushToast = useToastStore((state) => state.pushToast);
   const navigate = useNavigate();
+  
   const registerMutation = useMutation({
     mutationFn: registerRequest,
     onSuccess: (session) => {
@@ -94,7 +97,8 @@ export function RegisterPage() {
       return;
     }
     setMismatchError(null);
-    registerMutation.mutate({ userName, email, password });
+    // 🌟 ПЕРЕДАЕМ РОЛЬ В МУТАЦИЮ РЕГИСТРАЦИИ
+    registerMutation.mutate({ userName, email, password, role });
   };
 
   const handlePasswordKeyEvent = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -126,7 +130,8 @@ export function RegisterPage() {
             required
           />
         </label>
-        <label className="field">
+
+                <label className="field">
           <span>{t("loginPassword")}</span>
           <div className="input-with-action">
             <input
@@ -214,6 +219,20 @@ export function RegisterPage() {
             </li>
           </ul>
         </div>
+
+        {/* 🌟 ВЫБОР ЦЕЛЕВОЙ РОЛИ НА ПЛАТФОРМЕ */}
+        <label className="field" style={{ marginTop: "16px" }}>
+          <span>Роль сотрудника в системе</span>
+          <select 
+            className="input" 
+            value={role} 
+            onChange={(event) => setRole(event.target.value as AppRole)}
+          >
+            <option value="operator">👷‍♂️ {t("statusInProgress") || "Оператор (Доступ к инцидентам)"}</option>
+            <option value="viewer">👀 {t("severityLow") || "Наблюдатель (Только чтение)"}</option>
+          </select>
+        </label>
+
         {(mismatchError || hasPasswordMismatch) && (
           <p className="error-text">{mismatchError ?? t("registerPasswordMismatch")}</p>
         )}
@@ -233,4 +252,16 @@ export function RegisterPage() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+    
 
