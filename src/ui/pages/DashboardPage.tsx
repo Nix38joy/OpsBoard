@@ -60,6 +60,12 @@ export function DashboardPage() {
   const { t } = useI18n();
 
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
+
+    const [currentTime, setCurrentTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   const availableTeams = ["DBA Team", "Network Team", "Support Team", "Infrastructure Team"];
 
   const metricsQuery = useQuery({
@@ -115,6 +121,9 @@ export function DashboardPage() {
 
   return (
     <div className="page">
+       <div style={{ padding: "10px", background: "#fff", borderRadius: "6px", marginBottom: "15px", display: "inline-block", fontFamily: "monospace", fontWeight: "bold" }}>
+        🕒 Время смены: {currentTime.toLocaleTimeString()}
+      </div>
       <h1>{t("dashboardTitle")}</h1>
       <p>{t("dashboardSubtitle")}</p>
       <p className="muted-text">
