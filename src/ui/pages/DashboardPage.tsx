@@ -124,15 +124,14 @@ export function DashboardPage() {
     .slice(0, 3)
     .map((entry) => entry.item);
 
-    // 📜 ЖУРНАЛ АУДИТА: Читаем пользователей из базы данных localStorage
-  const rawUsers = localStorage.getItem("pulseboard.auth.users.v1");
-  let auditLogs: Array<{ id: string; userName: string; email: string; role: string; createdAt: string }> = [];
+  const rawHistory = localStorage.getItem("pulseboard.audit.history.v1");
+  let auditLogs: Array<{ id: string; userName: string; email: string; role: string; eventType: string; createdAt: string }> = [];
   
   try {
-    if (rawUsers) {
-      const parsedUsers = JSON.parse(rawUsers);
-      if (Array.isArray(parsedUsers)) {
-        auditLogs = parsedUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    if (rawHistory) {
+      const parsedHistory = JSON.parse(rawHistory);
+      if (Array.isArray(parsedHistory)) {
+        auditLogs = parsedHistory; // События уже отсортированы на уровне API (новые вверху)
       }
     }
   } catch (e) {
@@ -295,9 +294,20 @@ export function DashboardPage() {
                     <td style={{ fontFamily: "monospace", color: "var(--text-muted)" }}>
                       {new Date(log.createdAt).toLocaleString()}
                     </td>
-                    <td>
-                      <span style={{ color: "#16a34a", fontWeight: "bold" }}>✔ SUCCESS_REGISTER</span>: Успешное создание профиля для <strong>{log.userName}</strong> ({log.email})
+                                       <td>
+                      {log.eventType === "SUCCESS_LOGIN" ? (
+                        <span>
+                          <span style={{ color: "#0284c7", fontWeight: "bold" }}>⚡ SUCCESS_LOGIN</span>: 
+                          Сотрудник <strong style={{ color: "var(--text-main)" }}>{log.userName}</strong> ({log.email}) успешно подключился к пульту управления
+                        </span>
+                      ) : (
+                        <span>
+                          <span style={{ color: "#16a34a", fontWeight: "bold" }}>✔ SUCCESS_REGISTER</span>: 
+                          Создан новый профиль инженера <strong style={{ color: "var(--text-main)" }}>{log.userName}</strong> ({log.email})
+                        </span>
+                      )}
                     </td>
+
                     <td style={{ fontFamily: "monospace", opacity: 0.8 }}>
                       {log.id}
                     </td>

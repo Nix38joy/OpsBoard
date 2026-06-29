@@ -167,6 +167,22 @@ export async function registerRequest(payload: RegisterPayload): Promise<AuthSes
   };
 
   saveUsers([createdUser, ...users]);
+
+  
+  const historyKey = "pulseboard.audit.history.v1";
+  const existingHistory = JSON.parse(localStorage.getItem(historyKey) || "[]");
+  
+  const newRegisterEvent = {
+    id: `EVT-REG-${Date.now()}`,
+    userName: createdUser.userName,
+    email: createdUser.email,
+    role: createdUser.role,
+    eventType: "SUCCESS_REGISTER", // 🌟 Маркер того, что это регистрация
+    createdAt: createdUser.createdAt
+  };
+  
+  localStorage.setItem(historyKey, JSON.stringify([newRegisterEvent, ...existingHistory]));
+
   return createSessionFromUser(createdUser);
 }
 
@@ -186,7 +202,20 @@ export async function loginRequest(payload: LoginPayload): Promise<AuthSession> 
   if (!found || found.passwordHash !== hashPassword(password)) {
     throw new Error("Invalid email or password.");
   }
-
+   
+    const historyKey = "pulseboard.audit.history.v1";
+  const existingHistory = JSON.parse(localStorage.getItem(historyKey) || "[]");
+  
+  const newLoginEvent = {
+    id: `EVT-LOG-${Date.now()}`,
+    userName: found.userName,
+    email: found.email,
+    role: found.role,
+    eventType: "SUCCESS_LOGIN", // 🌟 Маркер того, что это именно вход
+    createdAt: new Date().toISOString()
+  };
+  
+  localStorage.setItem(historyKey, JSON.stringify([newLoginEvent, ...existingHistory]));
   return createSessionFromUser(found);
 }
 
