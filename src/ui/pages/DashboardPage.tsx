@@ -62,7 +62,12 @@ export function DashboardPage() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
 
     const [currentTime, setCurrentTime] = useState(new Date());
+
   useEffect(() => {
+      
+    
+
+
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
@@ -119,7 +124,23 @@ export function DashboardPage() {
     .slice(0, 3)
     .map((entry) => entry.item);
 
-  return (
+    // 📜 ЖУРНАЛ АУДИТА: Читаем пользователей из базы данных localStorage
+  const rawUsers = localStorage.getItem("pulseboard.auth.users.v1");
+  let auditLogs: Array<{ id: string; userName: string; email: string; role: string; createdAt: string }> = [];
+  
+  try {
+    if (rawUsers) {
+      const parsedUsers = JSON.parse(rawUsers);
+      if (Array.isArray(parsedUsers)) {
+        auditLogs = parsedUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      }
+    }
+  } catch (e) {
+    console.error("Ошибка чтения журнала аудита", e);
+  }
+
+  
+    return (
     <div className="page">
        <div style={{ padding: "10px", background: "#fff", borderRadius: "6px", marginBottom: "15px", display: "inline-block", fontFamily: "monospace", fontWeight: "bold" }}>
         🕒 Время смены: {currentTime.toLocaleTimeString()}
@@ -245,6 +266,51 @@ export function DashboardPage() {
               </table>
             </div>
           )
+        )}
+      </div>
+       <div className="card" style={{ marginTop: "32px", borderLeft: "4px solid #475569" }}>
+        <h2 style={{ marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+          <span>📋</span> Журнал безопасности пульта (Audit Log)
+        </h2>
+        <p className="muted-text" style={{ marginBottom: "20px" }}>
+          Официальный реестр регистрации учетных записей и сессий в системе PulseBoard.
+        </p>
+
+        {auditLogs.length === 0 ? (
+          <p className="muted-text">Журнал пуст. Системные сессии не зафиксированы.</p>
+        ) : (
+          <div className="table-wrap">
+            <table className="table" style={{ fontSize: "0.9rem" }}>
+              <thead>
+                <tr>
+                  <th>Временная метка (UTC)</th>
+                  <th>Событие системы</th>
+                  <th>Идентификатор</th>
+                  <th>Роль доступа</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditLogs.map((log) => (
+                  <tr key={log.id}>
+                    <td style={{ fontFamily: "monospace", color: "var(--text-muted)" }}>
+                      {new Date(log.createdAt).toLocaleString()}
+                    </td>
+                    <td>
+                      <span style={{ color: "#16a34a", fontWeight: "bold" }}>✔ SUCCESS_REGISTER</span>: Успешное создание профиля для <strong>{log.userName}</strong> ({log.email})
+                    </td>
+                    <td style={{ fontFamily: "monospace", opacity: 0.8 }}>
+                      {log.id}
+                    </td>
+                    <td>
+                      <span className={`pill pill-status-${log.role === 'admin' ? 'open' : log.role === 'operator' ? 'in_progress' : 'closed'}`}>
+                        {log.role.toUpperCase()}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
