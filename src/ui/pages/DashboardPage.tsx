@@ -6,7 +6,7 @@ import { useI18n } from "../../i18n/useI18n";
 import { LIVE_REFRESH_INTERVAL_MS } from "../../domain/liveUpdates";
 import { formatSlaRemaining, getIncidentSla } from "../../domain/sla";
 import { useUiSettingsStore } from "../../state/uiSettingsStore";
-import { useAuthStore } from "../../state/authStore";
+
 
 function SlaCell({ item }: { item: any }) {
   const { t } = useI18n();
@@ -60,49 +60,13 @@ export function DashboardPage() {
   const autoRefreshEnabled = useUiSettingsStore((state) => state.autoRefreshEnabled);
   const { t } = useI18n();
 
-  // 🔒 Шаг 1: Достаем метод принудительного выхода из системы
-  const logout = useAuthStore((state) => state.logout);
-
-  const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const availableTeams = ["DBA Team", "Network Team", "Support Team", "Infrastructure Team"];
-
-  // 🕒 Живые часы текущего времени смены
+    // 🕒 Живые часы текущего времени смены
   const [currentTime, setCurrentTime] = useState(new Date());
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // 🛡️ ВСТАВЛЯЕМ ВТОРОЙ КУСОК СЮДА (СТРОГО МЕЖДУ ЧАСАМИ И ЗАПРОСАМИ!)
-  useEffect(() => {
-    const INACTIVITY_TIMEOUT_MS = 10 * 1000; 
-    let timeoutId: NodeJS.Timeout;
-
-    const handleInactivity = () => {
-      logout();
-      alert("Сессия завершена из соображений безопасности из-за отсутствия активности.");
-    };
-
-    const resetTimer = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(handleInactivity, INACTIVITY_TIMEOUT_MS);
-    };
-
-    window.addEventListener("mousemove", resetTimer);
-    window.addEventListener("click", resetTimer);
-    window.addEventListener("keydown", resetTimer);
-
-    timeoutId = setTimeout(handleInactivity, INACTIVITY_TIMEOUT_MS);
-
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener("mousemove", resetTimer);
-      window.removeEventListener("click", resetTimer);
-      window.removeEventListener("keydown", resetTimer);
-    };
-  }, [logout]);
-
-    
   
   const metricsQuery = useQuery({
     queryKey: ["dashboard"],
@@ -168,6 +132,9 @@ export function DashboardPage() {
   } catch (e) {
     console.error("Ошибка чтения журнала аудита", e);
   }
+
+    const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const availableTeams = ["DBA Team", "Network Team", "Support Team", "Infrastructure Team"];
 
   
     return (
