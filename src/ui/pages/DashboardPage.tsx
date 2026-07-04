@@ -7,7 +7,6 @@ import { LIVE_REFRESH_INTERVAL_MS } from "../../domain/liveUpdates";
 import { formatSlaRemaining, getIncidentSla } from "../../domain/sla";
 import { useUiSettingsStore } from "../../state/uiSettingsStore";
 
-
 function SlaCell({ item }: { item: any }) {
   const { t } = useI18n();
   const [now, setNow] = useState(Date.now());
@@ -60,14 +59,17 @@ export function DashboardPage() {
   const autoRefreshEnabled = useUiSettingsStore((state) => state.autoRefreshEnabled);
   const { t } = useI18n();
 
-    // 🕒 Живые часы текущего времени смены
+  // 🌟 СТЕЙТ КОМАНД ПЕРЕНЕСЕН НАВЕРХ (До вычислений и фильтрации!)
+  const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const availableTeams = ["DBA Team", "Network Team", "Support Team", "Infrastructure Team"];
+
+  // 🕒 Живые часы текущего времени смены
   const [currentTime, setCurrentTime] = useState(new Date());
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  
   const metricsQuery = useQuery({
     queryKey: ["dashboard"],
     queryFn: getDashboardMetrics,
@@ -126,20 +128,16 @@ export function DashboardPage() {
     if (rawHistory) {
       const parsedHistory = JSON.parse(rawHistory);
       if (Array.isArray(parsedHistory)) {
-        auditLogs = parsedHistory; // События уже отсортированы на уровне API (новые вверху)
+        auditLogs = parsedHistory;
       }
     }
   } catch (e) {
     console.error("Ошибка чтения журнала аудита", e);
   }
 
-    const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const availableTeams = ["DBA Team", "Network Team", "Support Team", "Infrastructure Team"];
-
-  
-    return (
+  return (
     <div className="page">
-       <div style={{ padding: "10px", background: "#fff", borderRadius: "6px", marginBottom: "15px", display: "inline-block", fontFamily: "monospace", fontWeight: "bold" }}>
+      <div style={{ padding: "10px", background: "#fff", borderRadius: "6px", marginBottom: "15px", display: "inline-block", fontFamily: "monospace", fontWeight: "bold" }}>
         🕒 Время смены: {currentTime.toLocaleTimeString()}
       </div>
       <h1>{t("dashboardTitle")}</h1>
@@ -211,6 +209,7 @@ export function DashboardPage() {
             ))}
           </select>
         </div>
+
 
         {incidentsQuery.isLoading && <p className="muted-text">{t("incidentsLoading")}</p>}
         
