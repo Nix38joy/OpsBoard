@@ -70,7 +70,13 @@ export function DashboardPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const metricsQuery = useQuery({
+  const currentHour = currentTime.getHours();
+  const greetingText = 
+    currentHour < 6 ? "Доброй ночи" : 
+    currentHour < 12 ? "Доброе утро" : 
+    currentHour < 18 ? "Добрый день" : "Добрый вечер";
+  
+    const metricsQuery = useQuery({
     queryKey: ["dashboard"],
     queryFn: getDashboardMetrics,
     refetchInterval: autoRefreshEnabled ? LIVE_REFRESH_INTERVAL_MS : false,
@@ -140,7 +146,7 @@ export function DashboardPage() {
       <div style={{ padding: "10px", background: "#fff", borderRadius: "6px", marginBottom: "15px", display: "inline-block", fontFamily: "monospace", fontWeight: "bold" }}>
         🕒 Время смены: {currentTime.toLocaleTimeString()}
       </div>
-      <h1>{t("dashboardTitle")}</h1>
+      <h1>{greetingText}, Оператор! 👋</h1>
       <p>{t("dashboardSubtitle")}</p>
       <p className="muted-text">
         {autoRefreshEnabled ? t("commonLiveUpdatesOn") : t("commonLiveUpdatesOff")}
