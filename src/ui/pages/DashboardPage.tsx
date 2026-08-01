@@ -141,6 +141,44 @@ export function DashboardPage() {
     console.error("Ошибка чтения журнала аудита", e);
   }
 
+    // 📊 РЕАКТИВНЫЙ ПЕРЕСЧЕТ СЧЕТЧИКОВ ПО КОМАНДАМ
+  const displayMetrics = metricsQuery.data ? metricsQuery.data.map((metric) => {
+    // Если выбраны "Все команды", отдаем серверные данные без изменений
+    if (selectedTeam === "all") {
+      return metric;
+    }
+
+    // Извлекаем все инциденты для выбранной команды
+    const allIncidents = incidentsQuery.data?.items ?? [];
+    const teamIncidents = allIncidents.filter((item) => item.team === selectedTeam);
+
+    // Высчитываем значения под конкретную команду на лету
+    let newValue = metric.value;
+
+    if (metric.id === "open") {
+      // Считаем активные инциденты выбранной команды
+      newValue = teamIncidents.filter((item) => item.status === "open" || item.status === "in_progress").length;
+    } else if (metric.id === "overdue" || metric.id === "slaBreachedActive") {
+      // Считаем просроченные по SLA инциденты выбранной команды
+      newValue = teamIncidents.filter((item) => {
+        const sla = getIncidentSla(item);
+        return sla.isTracked && sla.isBreached;
+      }).length;
+    } else if (metric.id === "slaAtRiskActive" || metric.id === "criticalActive") {
+      // Считаем инциденты под угрозой (критические или со статусом At Risk)
+      newValue = teamIncidents.filter((item) => {
+        const sla = getIncidentSla(item);
+        return item.severity === "critical" || (sla.isTracked && sla.isAtRisk);
+      }).length;
+    }
+
+    return {
+      ...metric,
+      value: newValue, // Подменяем общую цифру на командную
+    };
+  }) : [];
+
+
   return (
     <div className="page">
       <div style={{ padding: "10px", background: "#fff", borderRadius: "6px", marginBottom: "15px", display: "inline-block", fontFamily: "monospace", fontWeight: "bold" }}>
@@ -173,13 +211,13 @@ export function DashboardPage() {
         <p className="error-text">{t("dashboardLoadError")}</p>
       )}
 
-      {!metricsQuery.isLoading && !metricsQuery.isError && metricsQuery.data && (
+            {!metricsQuery.isLoading && !metricsQuery.isError && metricsQuery.data && (
         <>
-          {metricsQuery.data.length === 0 ? (
+          {displayMetrics.length === 0 ? (
             <p className="muted-text">{t("dashboardEmpty")}</p>
           ) : (
             <div className="metrics-grid">
-              {metricsQuery.data.map((metric) => (
+              {displayMetrics.map((metric) => (
                 <Link className="card metric-card metric-link" to={metric.to} key={metric.id}>
                   <h2>{metricLabelById[metric.id] ?? metric.label}</h2>
                   <p>{metric.value}</p>
@@ -190,6 +228,7 @@ export function DashboardPage() {
           )}
         </>
       )}
+
 
       <div className="card" style={{ marginTop: "32px" }}>
         <h2 style={{ marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
