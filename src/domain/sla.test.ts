@@ -55,4 +55,33 @@ describe("Бизнес-логика SLA", () => {
     expect(result.remainingMs).toBe(expectedRemainingMs);
   });
 
+    it("должна выставлять флаг isAtRisk, если до дедлайна осталось менее 25% времени", () => {
+    // 1. Создаем инцидент p1 (лимит 2 часа)
+    const mockIncident: Incident = {
+      id: "INC-TEST-003",
+      title: "Сбой сетевого шлюза",
+      description: "Тест лимита риска",
+      status: "open",
+      priority: "p1",
+      severity: "high",
+      team: "Network Team",
+      assignee: "",
+      updatedAt: "2026-08-05T12:00:00.000Z", // 🕰️ Точка отсчета (12:00)
+    };
+
+    const startTimeMs = new Date(mockIncident.updatedAt).getTime();
+    
+    // 2. Имитируем проверку через 1 час 35 минут (95 минут в миллисекундах)
+    // Остается 25 минут до дедлайна (это меньше 25% от общего времени)
+    const checkTimeMs = startTimeMs + (95 * 60 * 1000); 
+
+    // 3. Вызываем калькулятор SLA
+    const result = getIncidentSla(mockIncident, checkTimeMs);
+
+    // 4. Проверяем флаги
+    expect(result.isTracked).toBe(true);
+    expect(result.isBreached).toBe(false); // Еще не просрочен!
+    expect(result.isAtRisk).toBe(true);    // Но уже под угрозой штрафа!
+  });
+
 });
