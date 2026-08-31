@@ -1,0 +1,2 @@
+export const LIVE_REFRESH_INTERVAL_MS = 15_000;
+
