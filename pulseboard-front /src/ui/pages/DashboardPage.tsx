@@ -1,38 +1,38 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useIncidentsFiltersStore } from '../../state/incidentsFiltersStore';
 import { getSeverityAnalytics } from '../../domain/analytics';
 import { IncidentPieChart } from './IncidentPieChart';
 import { getIncidentSla } from '../../domain/sla';
-import { Incident } from '../../domain/incidents'; // Импортируем твой тип инцидента
+import { Incident } from '../../domain/incidents';
 
 export const DashboardPage: React.FC = () => {
-  // 1. Из Zustand берем фильтры, которые там железно есть
-  const { selectedTeam, setSelectedTeam } = useIncidentsFiltersStore();
-  const [searchQuery, setSearchQuery] = useState('');
+  // 1. Берем фильтры и экшены строго по твоей архитектуре стейта
+  const { filters, setSearch, setStatus, setSeverity, resetFilters } = useIncidentsFiltersStore();
 
-  // 2. Временный мок-массив инцидентов для реактивного теста графиков Recharts
-  // Как только мы подключим бэкенд, сюда будут прилетать данные из сети!
+   // 2. Временный мок-массив инцидентов для теста с полной типизацией
   const incidents: Incident[] = useMemo(() => [
-    { id: 'INC-2026-001', title: 'Сбой репликации Postgres', team: 'DBA Team', severity: 'critical', status: 'open', description: 'Падение мастер-ноды', createdAt: Date.now() - 3600000, updatedAt: Date.now() },
-    { id: 'INC-2026-002', title: 'Потеря пакетов на шлюзе', team: 'Network Team', severity: 'high', status: 'in_progress', description: 'Сбой роутера', createdAt: Date.now() - 7200000, updatedAt: Date.now() },
-    { id: 'INC-2026-003', title: 'Утечка памяти в API', team: 'DevOps Team', severity: 'medium', status: 'open', description: 'Перегрузка Node.js', createdAt: Date.now() - 10000000, updatedAt: Date.now() },
-    { id: 'INC-2026-004', title: 'DDoS атака на фронт', team: 'SecOps Team', severity: 'critical', status: 'open', description: 'Флуд запросами', createdAt: Date.now() - 1800000, updatedAt: Date.now() },
-  ], []);
+    { id: 'INC-2026-001', title: 'Сбой репликации Postgres', team: 'DBA Team', severity: 'critical', priority: 'p1', assignee: 'Иван Иванов', status: 'open', description: 'Падение мастер-ноды', createdAt: Date.now() - 3600000, updatedAt: Date.now() },
+    { id: 'INC-2026-002', title: 'Потеря пакетов на шлюзе', team: 'Network Team', severity: 'high', priority: 'p2', assignee: 'Петр Петров', status: 'in_progress', description: 'Сбой роутера', createdAt: Date.now() - 7200000, updatedAt: Date.now() },
+    { id: 'INC-2026-003', title: 'Утечка памяти в API', team: 'DevOps Team', severity: 'medium', priority: 'p3', assignee: 'Сидор Сидоров', status: 'open', description: 'Перегрузка Node.js', createdAt: Date.now() - 10000000, updatedAt: Date.now() },
+    { id: 'INC-2026-004', title: 'DDoS атака на фронт', team: 'SecOps Team', severity: 'critical', priority: 'p1', assignee: 'Алексей Алексеев', status: 'open', description: 'Флуд запросами', createdAt: Date.now() - 1800000, updatedAt: Date.now() },
+  ] as unknown as Incident[], []);
 
-  // 3. Имитируем текущее время для расчета SLA
-  const nowMs = useMemo(() => Date.now(), [selectedTeam]);
 
-  // 4. Фильтруем инциденты по выбранной команде и поиску
+  const nowMs = useMemo(() => Date.now(), []);
+
+  // 3. Синхронизируем фильтрацию с твоим стейтом
   const filteredIncidents = useMemo(() => {
     return incidents.filter((incident) => {
-      const matchesTeam = selectedTeam === 'All' || incident.team === selectedTeam;
-      const matchesSearch = incident.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            incident.id.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesTeam && matchesSearch;
+      const matchesSearch = incident.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+                            incident.id.toLowerCase().includes(filters.search.toLowerCase());
+      const matchesStatus = filters.status === 'all' || incident.status === filters.status;
+      const matchesSeverity = filters.severity === 'all' || incident.severity === filters.severity;
+      
+      return matchesSearch && matchesStatus && matchesSeverity;
     });
-  }, [incidents, selectedTeam, searchQuery]);
+  }, [incidents, filters.search, filters.status, filters.severity]);
 
-  // 5. Считаем верхние метрики (счетчики)
+  // 4. Расчет счетчиков
   const metrics = useMemo(() => {
     let openCount = 0;
     let breachedCount = 0;
@@ -50,13 +50,10 @@ export const DashboardPage: React.FC = () => {
     return { openCount, breachedCount };
   }, [filteredIncidents, nowMs]);
 
-  // 6. Трансформируем данные для нашего нового кругового графика!
+  // 5. Трансформируем данные для графика
   const chartData = useMemo(() => {
     return getSeverityAnalytics(filteredIncidents);
   }, [filteredIncidents]);
-
-  // Список ИТ-команд для фильтрации
-  const teams = ['All', 'Network Team', 'DBA Team', 'SecOps Team', 'DevOps Team'];
 
   return (
     <div className="p-8 bg-slate-50 min-h-screen text-slate-800">
@@ -67,28 +64,50 @@ export const DashboardPage: React.FC = () => {
           <p className="text-sm text-slate-500 mt-1">Мониторинг аварий и SLA в реальном времени</p>
         </div>
 
-        {/* Фильтры */}
+        {/* Фильтры, подключенные к твоему Zustand */}
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
             placeholder="Поиск по ID или названию..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={filters.search}
+            onChange={(e) => setSearch(e.target.value)}
             className="px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
           />
+          
           <select
-            value={selectedTeam}
-            onChange={(e) => setSelectedTeam(e.target.value)}
+            value={filters.status}
+            onChange={(e) => setStatus(e.target.value as any)}
             className="px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
           >
-            {teams.map((team) => (
-              <option key={team} value={team}>{team}</option>
-            ))}
+            <option value="all">Все статусы</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
           </select>
+
+          <select
+            value={filters.severity}
+            onChange={(e) => setSeverity(e.target.value as any)}
+            className="px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+          >
+            <option value="all">Вся критичность</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+
+          <button 
+            onClick={resetFilters}
+            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium rounded-xl transition-colors shadow-sm"
+          >
+            Сбросить
+          </button>
         </div>
       </div>
 
-      {/* 📊 Панель метрик и График */}
+      {/* 📊 Метрики и График */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm flex flex-col justify-between h-64">
           <div>
@@ -106,11 +125,11 @@ export const DashboardPage: React.FC = () => {
           <p className="text-xs text-red-400/80 border-t border-slate-100 pt-4 font-medium">⚠️ Нарушение дедлайнов</p>
         </div>
 
-        {/* Наш новый круговой график Recharts */}
+        {/* Интерактивный круговой график */}
         <IncidentPieChart data={chartData} />
       </div>
 
-      {/* Таблица реестра */}
+      {/* Реестр */}
       <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-6">
         <h2 className="text-base font-bold text-slate-900 mb-4">Текущие аварийные задачи ({filteredIncidents.length})</h2>
         {filteredIncidents.length === 0 ? (
@@ -153,4 +172,5 @@ export const DashboardPage: React.FC = () => {
     </div>
   );
 };
+
 
