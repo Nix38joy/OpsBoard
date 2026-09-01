@@ -1,361 +1,146 @@
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { getDashboardMetrics, getIncidents } from "../../api/incidents";
-import { useI18n } from "../../i18n/useI18n";
-import { LIVE_REFRESH_INTERVAL_MS } from "../../domain/liveUpdates";
-import { formatSlaRemaining, getIncidentSla } from "../../domain/sla";
-import { useUiSettingsStore } from "../../state/uiSettingsStore";
+import React, { useState, useMemo } from 'react';
+import { useIncidentsFiltersStore } from '../../state/incidentsFiltersStore';
+import { getSeverityAnalytics } from '../../domain/analytics';
+import { IncidentPieChart } from './IncidentPieChart';
+import { getIncidentSla } from '../../domain/sla';
+import { Incident } from '../../domain/incidents'; // Импортируем твой тип инцидента
 
-function SlaCell({ item }: { item: any }) {
-  const { t } = useI18n();
-  const [now, setNow] = useState(Date.now());
+export const DashboardPage: React.FC = () => {
+  // 1. Из Zustand берем фильтры, которые там железно есть
+  const { selectedTeam, setSelectedTeam } = useIncidentsFiltersStore();
+  const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    const sla = getIncidentSla(item);
-    if (!sla.isTracked || sla.isBreached) {
-      return;
-    }
+  // 2. Временный мок-массив инцидентов для реактивного теста графиков Recharts
+  // Как только мы подключим бэкенд, сюда будут прилетать данные из сети!
+  const incidents: Incident[] = useMemo(() => [
+    { id: 'INC-2026-001', title: 'Сбой репликации Postgres', team: 'DBA Team', severity: 'critical', status: 'open', description: 'Падение мастер-ноды', createdAt: Date.now() - 3600000, updatedAt: Date.now() },
+    { id: 'INC-2026-002', title: 'Потеря пакетов на шлюзе', team: 'Network Team', severity: 'high', status: 'in_progress', description: 'Сбой роутера', createdAt: Date.now() - 7200000, updatedAt: Date.now() },
+    { id: 'INC-2026-003', title: 'Утечка памяти в API', team: 'DevOps Team', severity: 'medium', status: 'open', description: 'Перегрузка Node.js', createdAt: Date.now() - 10000000, updatedAt: Date.now() },
+    { id: 'INC-2026-004', title: 'DDoS атака на фронт', team: 'SecOps Team', severity: 'critical', status: 'open', description: 'Флуд запросами', createdAt: Date.now() - 1800000, updatedAt: Date.now() },
+  ], []);
 
-    const timer = setInterval(() => {
-      setNow(Date.now());
-    }, 1000);
+  // 3. Имитируем текущее время для расчета SLA
+  const nowMs = useMemo(() => Date.now(), [selectedTeam]);
 
-    return () => clearInterval(timer);
-  }, [item]);
+  // 4. Фильтруем инциденты по выбранной команде и поиску
+  const filteredIncidents = useMemo(() => {
+    return incidents.filter((incident) => {
+      const matchesTeam = selectedTeam === 'All' || incident.team === selectedTeam;
+      const matchesSearch = incident.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            incident.id.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesTeam && matchesSearch;
+    });
+  }, [incidents, selectedTeam, searchQuery]);
 
-  const sla = getIncidentSla(item);
+  // 5. Считаем верхние метрики (счетчики)
+  const metrics = useMemo(() => {
+    let openCount = 0;
+    let breachedCount = 0;
 
-  if (!sla.isTracked) {
-    return <span className="muted-text">{t("slaNotTracked")}</span>;
-  }
-
-  if (sla.isBreached) {
-    return <span className="pill pill-sla-breached">{t("slaBreached")}</span>;
-  }
-
-  const remainingMs = sla.remainingMs ? Math.max(0, sla.remainingMs - (Date.now() - now)) : 0;
-
-  if (remainingMs <= 0) {
-    return <span className="pill pill-sla-breached">{t("slaBreached")}</span>;
-  }
-
-  if (sla.isAtRisk) {
-    return (
-      <span className="pill pill-sla-risk">
-        {t("slaAtRisk")}: {t("slaIn", { time: formatSlaRemaining(remainingMs) })}
-      </span>
-    );
-  }
-
-  return (
-    <span className="pill pill-sla-ok">
-      {t("slaIn", { time: formatSlaRemaining(remainingMs) })}
-    </span>
-  );
-}
-
-export function DashboardPage() {
-  const autoRefreshEnabled = useUiSettingsStore((state) => state.autoRefreshEnabled);
-  const { t } = useI18n();
-
-  // 🌟 СТЕЙТ КОМАНД ПЕРЕНЕСЕН НАВЕРХ (До вычислений и фильтрации!)
-  const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const availableTeams = ["DBA Team", "Network Team", "Support Team", "Infrastructure Team"];
-
-  // 🕒 Живые часы текущего времени смены
-  const [currentTime, setCurrentTime] = useState(new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const currentHour = currentTime.getHours();
-  const greetingText = 
-    currentHour < 6 ? "Доброй ночи" : 
-    currentHour < 12 ? "Доброе утро" : 
-    currentHour < 18 ? "Добрый день" : "Добрый вечер";
-  
-    const metricsQuery = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: getDashboardMetrics,
-    refetchInterval: autoRefreshEnabled ? LIVE_REFRESH_INTERVAL_MS : false,
-  });
-
-  const incidentsQuery = useQuery({
-    queryKey: ["incidents-all-dashboard"],
-    queryFn: () => getIncidents({ 
-      status: "all", 
-      severity: "all", 
-      sla: "all", 
-      overdueOnly: false, 
-      page: 1,
-      search: "",
-      pageSize: 50
-    }),
-    refetchInterval: autoRefreshEnabled ? LIVE_REFRESH_INTERVAL_MS : false,
-  });
-
-  const metricLabelById: Record<string, string> = {
-    open: t("statusOpen"),
-    overdue: t("incidentsOverdueOnly"),
-    resolved7d: t("dashboardLabelResolved7d"),
-    criticalActive: t("dashboardLabelCriticalActive"),
-    slaBreachedActive: t("dashboardLabelSlaBreached"),
-    slaAtRiskActive: t("dashboardLabelSlaAtRisk"),
-  };
-
-  const metricDescriptionById: Record<string, string> = {
-    open: t("dashboardDescOpen"),
-    overdue: t("dashboardDescOverdue"),
-    resolved7d: t("dashboardDescResolved7d"),
-    criticalActive: t("dashboardDescCriticalActive"),
-    slaBreachedActive: t("dashboardDescSlaBreachedActive"),
-    slaAtRiskActive: t("dashboardDescSlaAtRiskActive"),
-  };
-
-  const filteredIncidents = (incidentsQuery.data?.items ?? []).filter((item) => {
-    const isStatusActive = item.status === "open" || item.status === "in_progress";
-    const matchesTeam = selectedTeam === "all" || item.team === selectedTeam;
-    return isStatusActive && matchesTeam;
-  });
-
-  const hotIncidents = [...filteredIncidents]
-    .map((item) => ({ item, sla: getIncidentSla(item) }))
-    .filter((entry) => entry.sla.isTracked && !entry.sla.isBreached)
-    .sort((a, b) => (a.sla.remainingMs ?? 0) - (b.sla.remainingMs ?? 0))
-    .slice(0, 3)
-    .map((entry) => entry.item);
-
-  const rawHistory = localStorage.getItem("pulseboard.audit.history.v1");
-  let auditLogs: Array<{ id: string; userName: string; email: string; role: string; eventType: string; createdAt: string }> = [];
-  
-  try {
-    if (rawHistory) {
-      const parsedHistory = JSON.parse(rawHistory);
-      if (Array.isArray(parsedHistory)) {
-        auditLogs = parsedHistory;
+    filteredIncidents.forEach((incident) => {
+      if (incident.status !== 'resolved' && incident.status !== 'closed') {
+        openCount++;
+        const sla = getIncidentSla(incident, nowMs);
+        if (sla.isBreached) {
+          breachedCount++;
+        }
       }
-    }
-  } catch (e) {
-    console.error("Ошибка чтения журнала аудита", e);
-  }
+    });
 
-    // 📊 РЕАКТИВНЫЙ ПЕРЕСЧЕТ СЧЕТЧИКОВ ПО КОМАНДАМ
-  const displayMetrics = metricsQuery.data ? metricsQuery.data.map((metric) => {
-    // Если выбраны "Все команды", отдаем серверные данные без изменений
-    if (selectedTeam === "all") {
-      return metric;
-    }
+    return { openCount, breachedCount };
+  }, [filteredIncidents, nowMs]);
 
-    // Извлекаем все инциденты для выбранной команды
-    const allIncidents = incidentsQuery.data?.items ?? [];
-    const teamIncidents = allIncidents.filter((item) => item.team === selectedTeam);
+  // 6. Трансформируем данные для нашего нового кругового графика!
+  const chartData = useMemo(() => {
+    return getSeverityAnalytics(filteredIncidents);
+  }, [filteredIncidents]);
 
-    // Высчитываем значения под конкретную команду на лету
-    let newValue = metric.value;
-
-    if (metric.id === "open") {
-      // Считаем активные инциденты выбранной команды
-      newValue = teamIncidents.filter((item) => item.status === "open" || item.status === "in_progress").length;
-    } else if (metric.id === "overdue" || metric.id === "slaBreachedActive") {
-      // Считаем просроченные по SLA инциденты выбранной команды
-      newValue = teamIncidents.filter((item) => {
-        const sla = getIncidentSla(item);
-        return sla.isTracked && sla.isBreached;
-      }).length;
-    } else if (metric.id === "slaAtRiskActive" || metric.id === "criticalActive") {
-      // Считаем инциденты под угрозой (критические или со статусом At Risk)
-      newValue = teamIncidents.filter((item) => {
-        const sla = getIncidentSla(item);
-        return item.severity === "critical" || (sla.isTracked && sla.isAtRisk);
-      }).length;
-    }
-
-    return {
-      ...metric,
-      value: newValue, // Подменяем общую цифру на командную
-    };
-  }) : [];
-
+  // Список ИТ-команд для фильтрации
+  const teams = ['All', 'Network Team', 'DBA Team', 'SecOps Team', 'DevOps Team'];
 
   return (
-    <div className="page">
-      <div style={{ padding: "10px", background: "#fff", borderRadius: "6px", marginBottom: "15px", display: "inline-block", fontFamily: "monospace", fontWeight: "bold" }}>
-        🕒 Время смены: {currentTime.toLocaleTimeString()}
-      </div>
-      <h1>{greetingText}, Оператор! 👋</h1>
-      <p>{t("dashboardSubtitle")}</p>
-      <p className="muted-text">
-        {autoRefreshEnabled ? t("commonLiveUpdatesOn") : t("commonLiveUpdatesOff")}
-      </p>
-      <div className="actions-row">
-        <button
-          className="btn ghost"
-          type="button"
-          onClick={() => {
-            void metricsQuery.refetch();
-            void incidentsQuery.refetch();
-          }}
-          disabled={metricsQuery.isFetching || incidentsQuery.isFetching}
-        >
-          {metricsQuery.isFetching || incidentsQuery.isFetching ? t("commonRefreshing") : t("commonRefreshNow")}
-        </button>
-      </div>
+    <div className="p-8 bg-slate-50 min-h-screen text-slate-800">
+      {/* Шапка */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Ситуационный центр PulseBoard</h1>
+          <p className="text-sm text-slate-500 mt-1">Мониторинг аварий и SLA в реальном времени</p>
+        </div>
 
-      {metricsQuery.isLoading && <p>{t("dashboardLoading")}</p>}
-      {metricsQuery.isFetching && !metricsQuery.isLoading && (
-        <p className="muted-text">{t("dashboardRefreshing")}</p>
-      )}
-      {metricsQuery.isError && (
-        <p className="error-text">{t("dashboardLoadError")}</p>
-      )}
-
-            {!metricsQuery.isLoading && !metricsQuery.isError && metricsQuery.data && (
-        <>
-          {displayMetrics.length === 0 ? (
-            <p className="muted-text">{t("dashboardEmpty")}</p>
-          ) : (
-            <div className="metrics-grid">
-              {displayMetrics.map((metric) => (
-                <Link className="card metric-card metric-link" to={metric.to} key={metric.id}>
-                  <h2>{metricLabelById[metric.id] ?? metric.label}</h2>
-                  <p>{metric.value}</p>
-                  <small>{metricDescriptionById[metric.id] ?? metric.description}</small>
-                </Link>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-
-      <div className="card" style={{ marginTop: "32px" }}>
-        <h2 style={{ marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
-          <span>🚨</span> {t("dashboardLabelSlaAtRisk") || "Критические инциденты (SLA под угрозой)"}
-        </h2>
-        <p className="muted-text" style={{ marginBottom: "16px" }}>
-          Инциденты в работе, требующие немедленного вмешательства дежурной смены.
-        </p>
-
-        <div style={{ marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontSize: "0.9rem", opacity: 0.8, fontWeight: "bold" }}>Фильтр по командам:</span>
+        {/* Фильтры */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            placeholder="Поиск по ID или названию..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+          />
           <select
-            className="input"
-            style={{ width: "220px", padding: "6px 12px", borderRadius: "6px" }}
             value={selectedTeam}
-            onChange={(event) => setSelectedTeam(event.target.value)}
+            onChange={(e) => setSelectedTeam(e.target.value)}
+            className="px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
           >
-            <option value="all">🌐 Все команды</option>
-            {availableTeams.map((team) => (
-              <option key={team} value={team}>
-                {team}
-              </option>
+            {teams.map((team) => (
+              <option key={team} value={team}>{team}</option>
             ))}
           </select>
         </div>
-
-
-        {incidentsQuery.isLoading && <p className="muted-text">{t("incidentsLoading")}</p>}
-        
-        {!incidentsQuery.isLoading && !incidentsQuery.isError && (
-          hotIncidents.length === 0 ? (
-            <p className="muted-text">Отлично! Активных инцидентов с горящим SLA для выбранной команды не обнаружено.</p>
-          ) : (
-            <div className="table-wrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>{t("incidentsTableTitle")}</th>
-                    <th>{t("incidentsSeverity")}</th>
-                    <th>{t("incidentsStatus")}</th>
-                    <th>{t("incidentsTableTeam")}</th>
-                    <th>{t("incidentsTableSla")}</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {hotIncidents.map((item) => (
-                    <tr key={item.id}>
-                      <td>
-                        <Link to={`/incidents/${item.id}`}>#{item.id}</Link>
-                      </td>
-                      <td style={{ fontWeight: "bold" }}>{item.title}</td>
-                      <td>
-                        <span className={`pill pill-severity-${item.severity}`}>
-                          {item.severity.toUpperCase()}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`pill pill-status-${item.status}`}>
-                          {item.status === "in_progress" ? t("statusInProgress") : t("statusOpen")}
-                        </span>
-                      </td>
-                      <td>{item.team}</td>
-                      <td>
-                        <SlaCell item={item} />
-                      </td>
-                      <td>
-                        <Link className="table-action-link" to={`/incidents/${item.id}`}>
-                          {t("incidentsOpen")}
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
-        )}
       </div>
-       <div className="card" style={{ marginTop: "32px", borderLeft: "4px solid #475569" }}>
-        <h2 style={{ marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
-          <span>📋</span> Журнал безопасности пульта (Audit Log)
-        </h2>
-        <p className="muted-text" style={{ marginBottom: "20px" }}>
-          Официальный реестр регистрации учетных записей и сессий в системе PulseBoard.
-        </p>
 
-        {auditLogs.length === 0 ? (
-          <p className="muted-text">Журнал пуст. Системные сессии не зафиксированы.</p>
+      {/* 📊 Панель метрик и График */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm flex flex-col justify-between h-64">
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Активные инциденты</span>
+            <h3 className="text-4xl font-extrabold text-slate-900 mt-4">{metrics.openCount}</h3>
+          </div>
+          <p className="text-xs text-slate-500 border-t border-slate-100 pt-4">Требуют внимания дежурной смены</p>
+        </div>
+
+        <div className="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm flex flex-col justify-between h-64">
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider text-red-400">Просрочено по SLA</span>
+            <h3 className="text-4xl font-extrabold text-red-500 mt-4">{metrics.breachedCount}</h3>
+          </div>
+          <p className="text-xs text-red-400/80 border-t border-slate-100 pt-4 font-medium">⚠️ Нарушение дедлайнов</p>
+        </div>
+
+        {/* Наш новый круговой график Recharts */}
+        <IncidentPieChart data={chartData} />
+      </div>
+
+      {/* Таблица реестра */}
+      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-6">
+        <h2 className="text-base font-bold text-slate-900 mb-4">Текущие аварийные задачи ({filteredIncidents.length})</h2>
+        {filteredIncidents.length === 0 ? (
+          <p className="text-sm text-slate-400 py-8 text-center">Инциденты не найдены</p>
         ) : (
-          <div className="table-wrap">
-            <table className="table" style={{ fontSize: "0.9rem" }}>
-              <thead>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-500">
+              <thead className="text-xs text-slate-400 uppercase bg-slate-50">
                 <tr>
-                  <th>Временная метка (UTC)</th>
-                  <th>Событие системы</th>
-                  <th>Идентификатор</th>
-                  <th>Роль доступа</th>
+                  <th className="px-4 py-3">ID</th>
+                  <th className="px-4 py-3">Название</th>
+                  <th className="px-4 py-3">Команда</th>
+                  <th className="px-4 py-3">Критичность</th>
+                  <th className="px-4 py-3">Статус</th>
                 </tr>
               </thead>
-              <tbody>
-                {auditLogs.map((log) => (
-                  <tr key={log.id}>
-                    <td style={{ fontFamily: "monospace", color: "var(--text-muted)" }}>
-                      {new Date(log.createdAt).toLocaleString()}
+              <tbody className="divide-y divide-slate-100">
+                {filteredIncidents.map((incident) => (
+                  <tr key={incident.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-4 py-3.5 font-semibold text-slate-900">{incident.id}</td>
+                    <td className="px-4 py-3.5 text-slate-700">{incident.title}</td>
+                    <td className="px-4 py-3.5"><span className="px-2.5 py-1 bg-slate-100 rounded-md text-xs font-medium text-slate-600">{incident.team}</span></td>
+                    <td className="px-4 py-3.5">
+                      <span className={`font-medium ${incident.severity === 'critical' ? 'text-red-500' : incident.severity === 'high' ? 'text-orange-500' : 'text-slate-600'}`}>
+                        {incident.severity}
+                      </span>
                     </td>
-                                       <td>
-                      {log.eventType === "SUCCESS_LOGIN" ? (
-                        <span>
-                          <span style={{ color: "#0284c7", fontWeight: "bold" }}>⚡ SUCCESS_LOGIN</span>: 
-                          Сотрудник <strong style={{ color: "var(--text-main)" }}>{log.userName}</strong> ({log.email}) успешно подключился к пульту управления
-                        </span>
-                      ) : (
-                        <span>
-                          <span style={{ color: "#16a34a", fontWeight: "bold" }}>✔ SUCCESS_REGISTER</span>: 
-                          Создан новый профиль инженера <strong style={{ color: "var(--text-main)" }}>{log.userName}</strong> ({log.email})
-                        </span>
-                      )}
-                    </td>
-
-                    <td style={{ fontFamily: "monospace", opacity: 0.8 }}>
-                      {log.id}
-                    </td>
-                    <td>
-                      <span className={`pill pill-status-${log.role === 'admin' ? 'open' : log.role === 'operator' ? 'in_progress' : 'closed'}`}>
-                        {log.role.toUpperCase()}
+                    <td className="px-4 py-3.5">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${incident.status === 'open' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
+                        {incident.status}
                       </span>
                     </td>
                   </tr>
@@ -367,4 +152,5 @@ export function DashboardPage() {
       </div>
     </div>
   );
-}
+};
+
