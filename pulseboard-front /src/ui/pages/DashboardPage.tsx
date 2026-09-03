@@ -1,3 +1,5 @@
+import { PermissionGuard } from '../components/PermissionGuard';
+
 import React, { useMemo } from 'react';
 import { useIncidentsFiltersStore } from '../../state/incidentsFiltersStore';
 import { getSeverityAnalytics } from '../../domain/analytics';
@@ -98,12 +100,26 @@ export const DashboardPage: React.FC = () => {
             <option value="low">Low</option>
           </select>
 
-          <button 
-            onClick={resetFilters}
-            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium rounded-xl transition-colors shadow-sm"
+                    <PermissionGuard 
+            check="editIncident"
+            fallback={
+              <button 
+                disabled
+                className="px-4 py-2 bg-slate-100 text-slate-400 text-sm font-medium rounded-xl border border-slate-200 cursor-not-allowed flex items-center gap-1 shadow-sm"
+                title="У вас недостаточно прав для изменения фильтров смены"
+              >
+                🔒 Сбросить
+              </button>
+            }
           >
-            Сбросить
-          </button>
+            <button 
+              onClick={resetFilters}
+              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium rounded-xl transition-colors shadow-sm"
+            >
+              Сбросить
+            </button>
+          </PermissionGuard>
+
         </div>
       </div>
 
