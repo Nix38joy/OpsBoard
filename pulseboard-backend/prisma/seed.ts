@@ -65,7 +65,7 @@ async function main() {
 main()
   .catch((e) => {
     console.error('❌ Ошибка во время засева базы:', e);
-    process.exit(1);
+    globalThis.process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
