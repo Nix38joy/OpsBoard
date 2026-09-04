@@ -4,21 +4,28 @@ import { PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class IncidentsService implements OnModuleInit {
-  // 🔥 Внедряем клиент Prisma внутрь как свойство
+  // Инициализируем клиент Prisma сразу при объявлении свойства
   // @ts-ignore
   private prisma = new PrismaClient();
 
-  // Подключаемся к PostgreSQL при старте сервера
+  // Принудительно подключаемся к PostgreSQL в момент старта NestJS
   async onModuleInit() {
-    await this.prisma.$connect();
+    try {
+      await this.prisma.$connect();
+      console.log('🔌 [Prisma] Успешное физическое подключение к PostgreSQL!');
+    } catch (err) {
+      console.error('❌ [Prisma] Не удалось подключиться к базе данных:', err);
+    }
   }
 
-  // Забираем все инциденты из базы, сортируя от свежих к старым
+  // Метод получения всех инцидентов
   async findAll() {
-    return this.prisma.incident.findMany({
+    // Явно возвращаем результат запроса к базе данных
+    return await this.prisma.incident.findMany({
       orderBy: {
         createdAt: 'desc',
       },
     });
   }
 }
+

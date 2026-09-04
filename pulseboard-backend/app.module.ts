@@ -5,8 +5,8 @@ import { IncidentsService } from './incidents.service';
 
 @Module({
   imports: [],
-  controllers: [AppController, IncidentsController], // Добавили Контроллер аварий!
-  providers: [IncidentsService],                     // Добавили Сервис базы данных!
+  controllers: [AppController, IncidentsController], 
+  providers: [IncidentsService],                     
 })
 export class AppModule {}
 

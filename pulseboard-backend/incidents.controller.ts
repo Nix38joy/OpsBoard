@@ -1,7 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
 import { IncidentsService } from './incidents.service';
 
-@Controller('api/incidents') // По этому адресу фронтенд будет забирать JSON!
+@Controller('incidents') 
+
 export class IncidentsController {
   constructor(private readonly incidentsService: IncidentsService) {}
 
