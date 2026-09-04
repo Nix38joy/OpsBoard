@@ -21,6 +21,7 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
+    "@nestjs/cli": "^12.0.0",
     "@prisma/client": "^7.10.0",
     "@types/node": "^26.4.0",
     "prisma": "^8.0.0-rc.12",
